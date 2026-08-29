@@ -1,0 +1,66 @@
+
+<mujoco model="microduck">
+  <compiler angle="radian"/>
+
+  <default>
+    <!-- Default physics for all joints and motors -->
+    <joint damping="0.1" armature="0.01"/>
+    <!-- The hardware clamp: max motor velocity/torque limits -->
+    <motor ctrlrange="-1.0 1.0" ctrllimited="true"/> 
+  </default>
+
+  <worldbody>
+    <!-- The Floor -->
+    <geom type="plane" size="2 2 0.1" rgba="0.9 0.9 0.9 1"/>
+
+    <!-- The Microduck Pelvis (Root Body) floating 25cm high -->
+    <body name="pelvis" pos="0 0 0.25">
+      <joint type="free" name="root"/>
+      <geom type="box" size="0.04 0.05 0.03" rgba="1 0.8 0.2 1" mass="0.3"/>
+
+      <!-- We define the 15 specific joints (Mocked as simple hinge joints for this lesson) -->
+      <!-- Left Leg (5) -->
+      <body name="l_leg"><joint name="l_hip_yaw" type="hinge" axis="0 0 1"/><geom type="capsule" size="0.01 0.05"/></body>
+      <body name="l_knee"><joint name="l_hip_roll" type="hinge" axis="1 0 0"/></body>
+      <body name="l_ankle"><joint name="l_hip_pitch" type="hinge" axis="0 1 0"/></body>
+      <body name="l_foot"><joint name="l_knee_pitch" type="hinge" axis="0 1 0"/></body>
+      <body name="l_toe"><joint name="l_ankle_pitch" type="hinge" axis="0 1 0"/></body>
+
+      <!-- Right Leg (5) -->
+      <body name="r_leg"><joint name="r_hip_yaw" type="hinge" axis="0 0 1"/><geom type="capsule" size="0.01 0.05"/></body>
+      <body name="r_knee"><joint name="r_hip_roll" type="hinge" axis="1 0 0"/></body>
+      <body name="r_ankle"><joint name="r_hip_pitch" type="hinge" axis="0 1 0"/></body>
+      <body name="r_foot"><joint name="r_knee_pitch" type="hinge" axis="0 1 0"/></body>
+      <body name="r_toe"><joint name="r_ankle_pitch" type="hinge" axis="0 1 0"/></body>
+
+      <!-- Neck & Head (5) -->
+      <body name="n_base"><joint name="neck_yaw" type="hinge" axis="0 0 1"/><geom type="sphere" size="0.03"/></body>
+      <body name="n_mid"><joint name="neck_pitch" type="hinge" axis="0 1 0"/></body>
+      <body name="n_top"><joint name="neck_roll" type="hinge" axis="1 0 0"/></body>
+      <body name="h_yaw"><joint name="head_yaw" type="hinge" axis="0 0 1"/></body>
+      <body name="h_pitch"><joint name="head_pitch" type="hinge" axis="0 1 0"/></body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <!-- We attach 15 virtual motors to the 15 joints -->
+    <!-- Left Leg -->
+    <motor joint="l_hip_yaw" name="motor_l0"/>
+    <motor joint="l_hip_roll" name="motor_l1"/>
+    <motor joint="l_hip_pitch" name="motor_l2"/>
+    <motor joint="l_knee_pitch" name="motor_l3"/>
+    <motor joint="l_ankle_pitch" name="motor_l4"/>
+    <!-- Right Leg -->
+    <motor joint="r_hip_yaw" name="motor_r5"/>
+    <motor joint="r_hip_roll" name="motor_r6"/>
+    <motor joint="r_hip_pitch" name="motor_r7"/>
+    <motor joint="r_knee_pitch" name="motor_r8"/>
+    <motor joint="r_ankle_pitch" name="motor_r9"/>
+    <!-- Neck/Head -->
+    <motor joint="neck_yaw" name="motor_n10"/>
+    <motor joint="neck_pitch" name="motor_n11"/>
+    <motor joint="neck_roll" name="motor_n12"/>
+    <motor joint="head_yaw" name="motor_n13"/>
+    <motor joint="head_pitch" name="motor_n14"/>
+  </actuator>
+</mujoco>
