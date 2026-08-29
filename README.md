@@ -123,7 +123,3 @@ Execute the production 50Hz asynchronous control loop.
 uv run main.py
 
 ```
-
-```
-
-```
