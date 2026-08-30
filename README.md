@@ -105,19 +105,27 @@ A complete semester-long curriculum taking students from hardware kinematics to 
 
 ---
 
-## 🛠️ Training & Edge Execution Pipeline
+## 🛠️ Training, Verification & Execution Pipeline
+
+```bash
+# Verify all 6 curriculum phases mathematically & empirically
+uv run verify_curriculum.py
+```
 
 ```text
-[ Step 1: Simulation ]   uv run duck_drop.py          # Verify MuJoCo physics & contact dynamics
+[ Step 1: Verification ] uv run verify_curriculum.py   # Empirically prove all 6 curriculum phases
           │
           ▼
-[ Step 2: RL Training ]  uv run train_microduck.py    # Train PPO locomotion policy in Gymnasium
+[ Step 2: Simulation ]   uv run duck_drop.py          # Verify MuJoCo physics & contact dynamics
           │
           ▼
-[ Step 3: Silicon Clamp] uv run export_to_onnx.py     # Extract Actor & bake [-1.0, 1.0] torque clamps
+[ Step 3: RL Training ]  uv run train_microduck.py    # Train PPO locomotion policy in Gymnasium
           │
           ▼
-[ Step 4: Edge Control ] uv run main.py               # Run 50Hz dual-loop async controller
+[ Step 4: Silicon Clamp] uv run export_to_onnx.py     # Extract Actor & bake [-1.0, 1.0] torque clamps
+          │
+          ▼
+[ Step 5: Edge Control ] uv run main.py               # Run 50Hz dual-loop async controller
 ```
 
 ---
