@@ -14,7 +14,9 @@ dependencies = [
     "onnxruntime>=1.29.0",
     "onnxscript>=0.7.1",
     "pydantic>=2.13.5",
+    "pypdf>=6.16.2",
     "python-dotenv>=1.2.3",
+    "reportlab>=5.0.1",
     "stable-baselines3>=2.9.0",
     "torch>=2.13.0",
 ]

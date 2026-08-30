@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microduck Masterclass: Phase 4 - Brain Surgery & Edge Inference</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e1e; color: #ffffff; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .slide { display: none; width: 840px; height: 520px; background: #2d2d2d; border-radius: 12px; padding: 35px 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; position: relative; }
+        .slide.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        h1 { color: #a855f7; margin-top: 0; font-size: 2.2em; }
+        p { font-size: 1.05em; line-height: 1.45; color: #cccccc; margin-bottom: 8px; }
+        .interactive-zone { margin-top: 15px; padding: 15px 20px; background: #1a1a1a; border-radius: 8px; border: 2px dashed #444; min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;}
+        .nav-buttons { position: absolute; bottom: 25px; width: calc(100% - 80px); display: flex; justify-content: space-between; }
+        button { background: #a855f7; color: #ffffff; border: none; padding: 10px 22px; font-size: 1em; font-weight: bold; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #c084fc; }
+        
+        input[type=range] { width: 70%; margin-top: 10px; cursor: pointer; }
+        
+        /* Slide 1: Scalpel Box */
+        .surgery-grid { display: flex; gap: 20px; width: 90%; justify-content: center; }
+        .surgery-card { flex: 1; background: #242f3d; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.85em; text-align: left; transition: opacity 0.3s; }
+        
+        /* Slide 2: Gear Strip Box */
+        .gear-visual { width: 60px; height: 60px; border-radius: 50%; border: 6px dashed #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.5em; transition: transform 0.2s, border-color 0.2s; }
+        
+        /* Slide 3: Graph Nodes */
+        .graph-flow { display: flex; gap: 10px; align-items: center; justify-content: center; }
+        .node-box { background: #0f172a; border: 2px solid #38bdf8; border-radius: 6px; padding: 8px 12px; font-family: monospace; font-size: 0.8em; }
+        
+        /* Slide 4: 20ms Budget Bar */
+        .budget-bar { width: 85%; height: 30px; background: #0f172a; border-radius: 6px; display: flex; overflow: hidden; border: 1px solid #444; }
+        .infer-slice { background: #ef4444; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.75em; font-weight: bold; font-family: monospace; }
+        .sleep-slice { background: #10b981; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.75em; font-weight: bold; font-family: monospace; color: #111; }
+        
+        /* Slide 5: Sliding Buffer */
+        .buffer-grid { display: flex; gap: 8px; }
+        .buffer-frame { width: 65px; height: 50px; background: #0f172a; border: 2px solid #a855f7; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: monospace; font-size: 0.75em; }
+
+        /* Slide 7: Quiz styling */
+        .mcq { background: #333; width: 100%; text-align: left; padding: 10px 14px; border-radius: 6px; font-weight: normal; font-size: 0.92em; color: #fff; margin-bottom: 6px; border: 1px solid #444; }
+        .mcq:hover { background: #444; }
+        .mcq.correct { background: #10b981 !important; color: #0b132b; font-weight: bold; }
+        .mcq.wrong { background: #ef4444 !important; color: #fff; }
+        .quiz-container { text-align: left; background: #1a1a1a; padding: 16px 20px; border-radius: 8px; max-height: 250px; }
+    </style>
+<body>
+    <a href="index.html" style="position: absolute; top: 16px; left: 24px; color: #94a3b8; text-decoration: none; font-size: 0.85em; font-weight: bold; background: rgba(30,41,59,0.7); backdrop-filter: blur(8px); padding: 6px 14px; border-radius: 6px; border: 1px solid #334155; z-index: 999; display: flex; align-items: center; gap: 6px;">🏠 <span>Curriculum Hub</span></a>
+
+    <!-- SLIDE 1: EXTRACTING REFLEXES -->
+    <div class="slide active" id="slide-1">
+        <h1>1. Brain Surgery: Firing the Coach 🩺</h1>
+        <p>After RL training finishes, the 24MB PyTorch file contains the <strong>Coach (Critic)</strong>, optimizer states, and gradient histories. The robot only needs the <strong>Reflexes (Actor)</strong>.</p>
+        <p><strong>The 12YO Concept:</strong> When taking a piano exam, your teacher doesn't sit on your lap. You leave the teacher at home and only take your muscle memory.</p>
+        <div class="interactive-zone">
+            <div class="surgery-grid">
+                <div class="surgery-card" id="card-coach" style="border-top: 3px solid #ef4444;">
+                    <span style="color: #ef4444; font-weight: bold;">❌ Discarded Coach (23.9 MB)</span><br>
+                    • Value Net $V_\phi(s)$<br>
+                    • Adam Momentum States<br>
+                    • Autograd Backprop Graphs
+                </div>
+                <div class="surgery-card" id="card-actor" style="border-top: 3px solid #10b981;">
+                    <span style="color: #10b981; font-weight: bold;">✅ Extracted Reflexes (35 KB)</span><br>
+                    • Forward Policy $\pi_\theta(a|s)$<br>
+                    • Frozen Synaptic Weights<br>
+                    • 100% Pure Forward Inference
+                </div>
+            </div>
+            <button onclick="performSurgery()" id="surgery-btn" style="margin-top: 10px; padding: 6px 16px; font-size: 0.85em;">✂️ Perform Brain Surgery (Prune 99.8% Size)</button>
+        </div>
+        <div class="nav-buttons">
+            <button style="visibility: hidden;">Prev</button>
+            <button onclick="nextSlide(2)">Next: Hardware Clamps ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: HARDWARE SAFETY CLAMPS -->
+    <div class="slide" id="slide-2">
+        <h1>2. Hardware Safety Clamps: torch.clamp 🛡️</h1>
+        <p>Neural networks are math equations that can output $+4.5$ or $-8.2$. If sent to a real servo motor, the gears will strip instantly.</p>
+        <p><strong>The 12YO Concept:</strong> A physical bowling lane has bumper rails so the ball can never bounce into the next alley. Clamping is our mathematical bumper rail.</p>
+        <div class="interactive-zone">
+            <div style="display: flex; gap: 40px; align-items: center;">
+                <div class="gear-visual" id="gear-icon">⚙️</div>
+                <div style="text-align: left; font-family: monospace; font-size: 0.9em;">
+                    Raw Neural Guess: <span id="clamp-raw" style="color: #ef4444; font-weight: bold;">+2.40</span><br>
+                    Baked Clamped Signal: <span id="clamp-safe" style="color: #10b981; font-weight: bold;">+1.00</span><br>
+                    Motor Status: <span id="gear-status" style="color: #10b981; font-weight: bold;">HEALTHY (100% Safe)</span>
+                </div>
+            </div>
+            <input type="range" min="-300" max="300" value="240" id="raw-slider" oninput="updateClampSlider()">
+            <p style="font-size: 0.82em; color: #94a3b8; margin: 4px 0 0 0;">Move slider past ±100% to test how torch.clamp() restricts the motor signal.</p>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(1)">⬅️ Prev</button>
+            <button onclick="nextSlide(3)">Next: ONNX Graph ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: ONNX COMPILATION -->
+    <div class="slide" id="slide-3">
+        <h1>3. ONNX Compilation: Python to Silicon 📜</h1>
+        <p>Python is too slow and heavy for edge robots. We compile the PyTorch model into <strong>ONNX (Open Neural Network Exchange)</strong>.</p>
+        <p><strong>The 12YO Concept:</strong> Translating an English recipe into universal cooking symbols that any chef in any country can execute instantly.</p>
+        <div class="interactive-zone">
+            <div class="graph-flow">
+                <div class="node-box" style="border-color: #38bdf8;"><span style="color: #38bdf8;">Input Tensor</span><br><small>[1, 60] Floats</small></div>
+                <span style="color: #f59e0b; font-weight: bold;">➔</span>
+                <div class="node-box" style="border-color: #a855f7;"><span style="color: #a855f7;">Gemm (Linear)</span><br><small>256 Neurons</small></div>
+                <span style="color: #f59e0b; font-weight: bold;">➔</span>
+                <div class="node-box" style="border-color: #f59e0b;"><span style="color: #f59e0b;">Relu</span><br><small>Activation</small></div>
+                <span style="color: #f59e0b; font-weight: bold;">➔</span>
+                <div class="node-box" style="border-color: #10b981;"><span style="color: #10b981;">Clip [-1, 1]</span><br><small>15 Motors</small></div>
+            </div>
+            <p style="font-family: monospace; color: #10b981; font-size: 0.85em; margin-top: 15px;">torch.onnx.export(model, dummy_input, 'microduck_walking_policy.onnx')</p>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(2)">⬅️ Prev</button>
+            <button onclick="nextSlide(4)">Next: 50Hz Budget ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 4: THE 50HZ BUDGET -->
+    <div class="slide" id="slide-4">
+        <h1>4. The 50Hz Real-Time Latency Budget ⏱️</h1>
+        <p>Our control loop must run 50 times a second: <code>1000ms / 50 = 20.0ms</code> per step. Any hesitation means the robot falls.</p>
+        <p><strong>The 12YO Concept:</strong> If you have 20 minutes to finish your homework and you finish in 2.5 minutes, you sleep for the remaining 17.5 minutes to stay on schedule.</p>
+        <div class="interactive-zone">
+            <div class="budget-bar">
+                <div class="infer-slice" style="width: 12.5%;">Inference: 2.5ms</div>
+                <div class="sleep-slice" style="width: 87.5%;">Explicit Cadence Sleep: 17.5ms</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; width: 85%; font-family: monospace; font-size: 0.85em; margin-top: 8px;">
+                <span style="color: #ef4444;">• ONNX Runtime on RK3566: 2.5ms</span>
+                <span style="color: #10b981;">• Precise Sleep: 17.5ms</span>
+                <span style="color: #38bdf8;">• Total Loop: 20.0ms (50Hz)</span>
+            </div>
+            <p style="font-size: 0.82em; color: #94a3b8; margin-top: 8px;">Zero timing jitter ensures the physical motors match simulation physics exactly.</p>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(3)">⬅️ Prev</button>
+            <button onclick="nextSlide(5)">Next: Temporal Memory ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 5: TEMPORAL MEMORY -->
+    <div class="slide" id="slide-5">
+        <h1>5. Temporal Memory: The Sliding Buffer 🌊</h1>
+        <p>A single sensor frame cannot measure momentum. We maintain a fixed sliding history using <code>collections.deque(maxlen=4)</code>.</p>
+        <p><strong>The 12YO Concept:</strong> Unlike ChatGPT which grows huge and gets slower with long chats, our robot's memory is a fixed conveyor belt where old frames drop off.</p>
+        <div class="interactive-zone">
+            <div class="buffer-grid">
+                <div class="buffer-frame"><span style="color: #94a3b8;">t - 3</span><small>15 floats</small></div>
+                <div class="buffer-frame"><span style="color: #94a3b8;">t - 2</span><small>15 floats</small></div>
+                <div class="buffer-frame"><span style="color: #38bdf8;">t - 1</span><small>15 floats</small></div>
+                <div class="buffer-frame" style="border-color: #10b981;"><span style="color: #10b981;">t (Live)</span><small id="frame-num">Frame #1</small></div>
+            </div>
+            <p style="font-family: monospace; color: #38bdf8; font-size: 0.88em; margin: 10px 0 6px 0;">Observation Shape: [1, 60] Floats | Memory: Constant O(1)</p>
+            <button onclick="pushFrame()" style="padding: 6px 16px; font-size: 0.85em;">📥 Push New 50Hz Sensor Frame</button>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(4)">⬅️ Prev</button>
+            <button onclick="nextSlide(6)">Next: Edge Deployment ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 6: EDGE DEPLOYMENT -->
+    <div class="slide" id="slide-6">
+        <h1>6. Edge Deployment: Flashing the Brain 🚀</h1>
+        <p>We transfer our lightweight <code>.onnx</code> file over WiFi directly into the Microduck's onboard filesystem at <code>/etc/microduck/policies/</code>.</p>
+        <p><strong>The 12YO Concept:</strong> Like downloading a new song to your phone so you can listen offline without needing internet.</p>
+        <div class="interactive-zone">
+            <div style="background: #0d1117; color: #58a6ff; font-family: monospace; font-size: 0.85em; text-align: left; padding: 12px; border-radius: 6px; width: 85%;">
+                $ scp microduck_walking_policy.onnx microduck@192.168.1.50:/etc/microduck/<br>
+                <span id="scp-status" style="color: #7ee787;">[====================] 100% 35KB (0.05s)</span><br>
+                $ ssh microduck "robotctl update microduck_walking_policy.onnx"<br>
+                <span style="color: #38bdf8;">✅ Model hot-swapped in memory! 50Hz control active.</span>
+            </div>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(5)">⬅️ Prev</button>
+            <button onclick="nextSlide(7)">Next: Knowledge Check 🧠 ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 7: KNOWLEDGE CHECK (5 QUESTIONS - SKIPPABLE) -->
+    <div class="slide" id="slide-7">
+        <h1>7. Phase 4 Knowledge Check 🧠</h1>
+        <p>Test your understanding of Model Extraction, Clamping & ONNX! Answer the 5 questions or skip.</p>
+        
+        <div class="quiz-container" id="quiz-container">
+            <!-- Q1 -->
+            <div class="question" id="q1">
+                <h4 style="color: #a855f7; margin: 0 0 6px 0;">1. Why do we extract only the Actor network and discard the Critic?</h4>
+                <button class="mcq" onclick="checkAnswer(1, false, this)">A) Because the Critic network is written in a different programming language.</button>
+                <button class="mcq" onclick="checkAnswer(1, true, this)">B) The Critic is only needed to score actions during training; the Actor contains all walking reflexes.</button>
+                <button class="mcq" onclick="checkAnswer(1, false, this)">C) The Critic network makes the robot walk backwards.</button>
+            </div>
+            <!-- Q2 -->
+            <div class="question" id="q2" style="display: none;">
+                <h4 style="color: #10b981; margin: 0 0 6px 0;">2. What is the danger of deploying an ONNX model without torch.clamp()?</h4>
+                <button class="mcq" onclick="checkAnswer(2, true, this)">A) Runaway neural outputs (>1.0) can command excessive speed, stripping physical gears.</button>
+                <button class="mcq" onclick="checkAnswer(2, false, this)">B) The robot's battery will charge too quickly.</button>
+                <button class="mcq" onclick="checkAnswer(2, false, this)">C) The WiFi antenna will disconnect.</button>
+            </div>
+            <!-- Q3 -->
+            <div class="question" id="q3" style="display: none;">
+                <h4 style="color: #38bdf8; margin: 0 0 6px 0;">3. What is the benefit of compiling PyTorch models to ONNX for edge robotics?</h4>
+                <button class="mcq" onclick="checkAnswer(3, false, this)">A) ONNX allows the robot to fly.</button>
+                <button class="mcq" onclick="checkAnswer(3, true, this)">B) ONNX represents pure math graphs, executing in <2.5ms without heavy Python overhead.</button>
+                <button class="mcq" onclick="checkAnswer(3, false, this)">C) ONNX turns the camera into an IMU.</button>
+            </div>
+            <!-- Q4 -->
+            <div class="question" id="q4" style="display: none;">
+                <h4 style="color: #f59e0b; margin: 0 0 6px 0;">4. Why does our 50Hz control loop explicitly sleep for 17.5ms after a 2.5ms inference?</h4>
+                <button class="mcq" onclick="checkAnswer(4, true, this)">A) To maintain a perfectly steady 20ms heartbeat and prevent motor timing jitter.</button>
+                <button class="mcq" onclick="checkAnswer(4, false, this)">B) To allow the CPU to cool down to 0 degrees.</button>
+                <button class="mcq" onclick="checkAnswer(4, false, this)">C) Because Linux cannot run for more than 3ms.</button>
+            </div>
+            <!-- Q5 -->
+            <div class="question" id="q5" style="display: none;">
+                <h4 style="color: #ef4444; margin: 0 0 6px 0;">5. Why does deque(maxlen=4) avoid the 'token explosion' problem of LLMs?</h4>
+                <button class="mcq" onclick="checkAnswer(5, false, this)">A) It deletes the robot's brain every second.</button>
+                <button class="mcq" onclick="checkAnswer(5, true, this)">B) It holds a fixed 60-float buffer, ensuring constant O(1) memory and predictable 2.5ms latency.</button>
+                <button class="mcq" onclick="checkAnswer(5, false, this)">C) It compresses videos into text files.</button>
+            </div>
+            
+            <p id="quiz-feedback" style="font-weight: bold; margin-top: 10px; margin-bottom: 0; min-height: 20px; font-size: 0.9em;"></p>
+        </div>
+
+        <div class="nav-buttons">
+            <button onclick="nextSlide(6)">⬅️ Prev</button>
+            <div>
+                <button onclick="skipQuiz()" style="background: #64748b; margin-right: 8px;">Skip Quiz ⏭️</button>
+                <button id="finish-btn" style="display: none;" onclick="alert('Phase 4 Complete! Ready for Phase 5: The Rust Nervous System!')">Complete Phase 4 ✅</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Navigation ---
+        function nextSlide(slideNum) {
+            document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+            document.getElementById('slide-' + slideNum).classList.add('active');
+        }
+
+        // --- Slide 1: Surgery Animation ---
+        function performSurgery() {
+            document.getElementById('card-coach').style.opacity = '0.3';
+            document.getElementById('card-actor').style.transform = 'scale(1.05)';
+            document.getElementById('surgery-btn').innerText = '✅ Brain Surgery Complete (35KB Saved)';
+            document.getElementById('surgery-btn').style.background = '#10b981';
+        }
+
+        // --- Slide 2: Clamp Slider ---
+        function updateClampSlider() {
+            const raw = (document.getElementById('raw-slider').value / 100).toFixed(2);
+            const clamped = Math.max(-1.0, Math.min(1.0, parseFloat(raw))).toFixed(2);
+            document.getElementById('clamp-raw').innerText = (raw > 0 ? "+" : "") + raw;
+            document.getElementById('clamp-safe').innerText = (clamped > 0 ? "+" : "") + clamped;
+            const gear = document.getElementById('gear-icon');
+            const rot = clamped * 45;
+            gear.style.transform = `rotate(${rot}deg)`;
+        }
+
+        // --- Slide 5: Memory Buffer Push ---
+        let count = 1;
+        function pushFrame() {
+            count++;
+            document.getElementById('frame-num').innerText = "Frame #" + count;
+        }
+
+        // --- Slide 7: Quiz Logic (5 Questions) ---
+        function checkAnswer(qNum, isCorrect, btn) {
+            const feedback = document.getElementById('quiz-feedback');
+            const buttons = document.getElementById('q' + qNum).getElementsByTagName('button');
+            for(let b of buttons) { b.className = 'mcq'; }
+            
+            if (isCorrect) {
+                btn.classList.add('correct');
+                feedback.style.color = '#10b981';
+                feedback.innerText = "✅ Correct! Moving to next question...";
+                
+                setTimeout(() => {
+                    document.getElementById('q' + qNum).style.display = 'none';
+                    if (qNum < 5) {
+                        document.getElementById('q' + (qNum + 1)).style.display = 'block';
+                        feedback.innerText = "";
+                    } else {
+                        feedback.innerText = "🎉 100% Score! You mastered Brain Surgery & Edge Inference.";
+                        document.getElementById('finish-btn').style.display = 'inline-block';
+                    }
+                }, 1000);
+            } else {
+                btn.classList.add('wrong');
+                feedback.style.color = '#ef4444';
+                feedback.innerText = "❌ Incorrect. Review the concepts and try again!";
+            }
+        }
+
+        function skipQuiz() {
+            for (let i = 1; i <= 5; i++) {
+                document.getElementById('q' + i).style.display = 'none';
+            }
+            document.getElementById('quiz-feedback').style.color = '#a855f7';
+            document.getElementById('quiz-feedback').innerText = "⏭️ Quiz Skipped! Answers: 1-B, 2-A, 3-B, 4-A, 5-B";
+            document.getElementById('finish-btn').style.display = 'inline-block';
+        }
+    </script>
+</body>
+</html>

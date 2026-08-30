@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microduck Masterclass: Phase 5 - The Nervous System (Rust on RK3566)</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e1e; color: #ffffff; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .slide { display: none; width: 840px; height: 520px; background: #2d2d2d; border-radius: 12px; padding: 35px 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; position: relative; }
+        .slide.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        h1 { color: #f59e0b; margin-top: 0; font-size: 2.2em; }
+        p { font-size: 1.05em; line-height: 1.45; color: #cccccc; margin-bottom: 8px; }
+        .interactive-zone { margin-top: 15px; padding: 15px 20px; background: #1a1a1a; border-radius: 8px; border: 2px dashed #444; min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;}
+        .nav-buttons { position: absolute; bottom: 25px; width: calc(100% - 80px); display: flex; justify-content: space-between; }
+        button { background: #f59e0b; color: #0b132b; border: none; padding: 10px 22px; font-size: 1em; font-weight: bold; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #fbbf24; }
+        
+        input[type=range] { width: 70%; margin-top: 10px; cursor: pointer; }
+        
+        /* Terminal Styling */
+        .terminal-box { width: 90%; height: 140px; background: #0c1017; border: 1px solid #30363d; border-radius: 6px; font-family: monospace; font-size: 0.85em; text-align: left; padding: 10px 14px; overflow-y: auto; color: #58a6ff; }
+        .term-input { background: transparent; border: none; color: #7ee787; font-family: monospace; font-size: 1em; outline: none; width: 60%; }
+        
+        /* Slide 1: Rust Borrow Checker Box */
+        .rust-grid { display: flex; gap: 15px; width: 90%; justify-content: center; }
+        .rust-card { flex: 1; background: #242f3d; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.82em; text-align: left; }
+        
+        /* Slide 2: Daemon Dial */
+        .daemon-status { display: flex; gap: 25px; align-items: center; font-family: monospace; }
+        .status-pill { padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 0.8em; }
+
+        /* Slide 5: Calibration Offset */
+        .cal-display { display: flex; gap: 20px; font-family: monospace; font-size: 0.9em; }
+
+        /* Slide 7: Quiz styling */
+        .mcq { background: #333; width: 100%; text-align: left; padding: 10px 14px; border-radius: 6px; font-weight: normal; font-size: 0.92em; color: #fff; margin-bottom: 6px; border: 1px solid #444; }
+        .mcq:hover { background: #444; }
+        .mcq.correct { background: #10b981 !important; color: #0b132b; font-weight: bold; }
+        .mcq.wrong { background: #ef4444 !important; color: #fff; }
+        .quiz-container { text-align: left; background: #1a1a1a; padding: 16px 20px; border-radius: 8px; max-height: 250px; }
+    </style>
+<body>
+    <a href="index.html" style="position: absolute; top: 16px; left: 24px; color: #94a3b8; text-decoration: none; font-size: 0.85em; font-weight: bold; background: rgba(30,41,59,0.7); backdrop-filter: blur(8px); padding: 6px 14px; border-radius: 6px; border: 1px solid #334155; z-index: 999; display: flex; align-items: center; gap: 6px;">🏠 <span>Curriculum Hub</span></a>
+
+    <!-- SLIDE 1: RUST MEMORY SAFETY -->
+    <div class="slide active" id="slide-1">
+        <h1>1. Rust & Embedded Memory Safety 🦀</h1>
+        <p>Real-time robots cannot afford crashes or Garbage Collection pauses. Pollen Robotics chose <strong>Rust</strong> for the Microduck's core daemon stack.</p>
+        <p><strong>The 12YO Concept:</strong> In a library, you can only borrow one book at a time. The borrow checker ensures no two motors ever fight over the same wire.</p>
+        <div class="interactive-zone">
+            <div class="rust-grid">
+                <div class="rust-card" style="border-top: 3px solid #ef4444;">
+                    <span style="color: #ef4444; font-weight: bold;">❌ C/C++ Danger:</span><br>
+                    • Null pointer segfault<br>
+                    • Data race on /dev/imu<br>
+                    • Robot falls mid-step
+                </div>
+                <div class="rust-card" style="border-top: 3px solid #10b981;">
+                    <span style="color: #10b981; font-weight: bold;">✅ Rust Compiler:</span><br>
+                    • Strict Ownership model<br>
+                    • Thread-safe Send/Sync<br>
+                    • Zero runtime GC pauses
+                </div>
+            </div>
+            <p style="font-family: monospace; color: #10b981; font-size: 0.85em; margin-top: 10px;">Compile error prevented: cannot borrow `imu_data` as mutable more than once at a time</p>
+        </div>
+        <div class="nav-buttons">
+            <button style="visibility: hidden;">Prev</button>
+            <button onclick="nextSlide(2)">Next: The robotd Daemon ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: THE ROBOTD DAEMON -->
+    <div class="slide" id="slide-2">
+        <h1>2. The robotd Daemon: The Spinal Cord ⚡</h1>
+        <p><code>robotd</code> is the central system daemon running on the Rockchip RK3566. It polls sensors, executes ONNX inference, and fires 15 motors every 20ms.</p>
+        <p><strong>The 12YO Concept:</strong> Your spinal cord makes your leg kick when tapped before your brain even thinks. <code>robotd</code> handles these fast reflexes.</p>
+        <div class="interactive-zone">
+            <div class="daemon-status">
+                <div>
+                    <span style="color: #94a3b8;">Daemon:</span> <b>robotd.service</b><br>
+                    <span style="color: #94a3b8;">PID:</span> <b>1042 (Real-Time SCHED_FIFO)</b>
+                </div>
+                <div class="status-pill" style="background: #064e3b; color: #34d399; border: 1px solid #10b981;">
+                    ● ACTIVE (50.0 Hz)
+                </div>
+                <div>
+                    <span style="color: #94a3b8;">Jitter:</span> <span style="color: #38bdf8;">±0.08 ms</span><br>
+                    <span style="color: #94a3b8;">Drop Rate:</span> <span style="color: #34d399;">0.00%</span>
+                </div>
+            </div>
+            <p style="font-family: monospace; font-size: 0.82em; color: #94a3b8; margin-top: 12px;">Step sequence: read_sensors() → onnx_step() → write_actuators() → timer.sleep_until(20ms)</p>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(1)">⬅️ Prev</button>
+            <button onclick="nextSlide(3)">Next: Unix Domain Sockets ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: UNIX DOMAIN SOCKETS -->
+    <div class="slide" id="slide-3">
+        <h1>3. Inter-Process Communication: Unix Sockets 🔌</h1>
+        <p>How do we talk to <code>robotd</code> without interrupting the 50Hz balance loop? Through an asynchronous <strong>Unix Domain Socket</strong> (<code>/var/run/robotd.sock</code>).</p>
+        <p><strong>The 12YO Concept:</strong> Like slipping a written note under a locked classroom door without making the teacher pause the lecture.</p>
+        <div class="interactive-zone">
+            <div style="display: flex; gap: 15px; align-items: center; width: 85%;">
+                <div style="flex: 1; background: #0f172a; border: 2px solid #38bdf8; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 0.8em;">
+                    <span style="color: #38bdf8;">CLI / App Socket</span><br>
+                    JSON Request:<br>
+                    {"cmd": "get_telemetry"}
+                </div>
+                <div style="font-size: 1.5em; color: #f59e0b;">⇄</div>
+                <div style="flex: 1; background: #0f172a; border: 2px solid #10b981; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 0.8em;">
+                    <span style="color: #10b981;">robotd Daemon</span><br>
+                    Telemetry Stream:<br>
+                    {"imu_pitch": -1.2, "batt": 88%}
+                </div>
+            </div>
+            <p style="font-size: 0.82em; color: #94a3b8; margin-top: 10px;">Zero-copy local memory transfers keep communication latency under 0.1ms.</p>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(2)">⬅️ Prev</button>
+            <button onclick="nextSlide(4)">Next: robotctl CLI ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 4: ROBOTCTL CLI (INTERACTIVE TERMINAL) -->
+    <div class="slide" id="slide-4">
+        <h1>4. The robotctl CLI: The Remote Control 🕹️</h1>
+        <p>We interact with the real Microduck using the <code>robotctl</code> CLI. Try typing commands in the interactive terminal below!</p>
+        <p><strong>The 12YO Concept:</strong> Your joystick and dashboard. You can inspect battery, change walking speeds, or hit the Emergency Stop button.</p>
+        <div class="interactive-zone">
+            <div class="terminal-box" id="term-output">
+                Welcome to Microduck OS (RK3566 / Linux 6.1)<br>
+                Try typing: <span style="color: #7ee787;">status</span>, <span style="color: #7ee787;">monitor</span>, or <span style="color: #7ee787;">estop</span><br>
+                <div id="term-log"></div>
+            </div>
+            <div style="width: 90%; text-align: left; margin-top: 6px; font-family: monospace; font-size: 0.88em;">
+                microduck:~$ robotctl <input type="text" id="term-cmd" class="term-input" placeholder="type status and press Enter..." onkeydown="handleTerm(event)">
+            </div>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(3)">⬅️ Prev</button>
+            <button onclick="nextSlide(5)">Next: Configuration (configd) ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 5: CONFIGURATION & CALIBRATION (configd) -->
+    <div class="slide" id="slide-5">
+        <h1>5. Configuration: The configd Daemon 📐</h1>
+        <p>No two 3D-printed parts are identical! <code>configd</code> manages motor zero-offsets, PID gains, and sensor calibration matrices.</p>
+        <p><strong>The 12YO Concept:</strong> If your bicycle handlebars are slightly crooked from the factory, you adjust the screw so it drives straight. That is what config offsets do.</p>
+        <div class="interactive-zone">
+            <div class="cal-display">
+                <div>Raw Zero: <span style="color: #ef4444;">-0.08 rad</span></div>
+                <div>Offset ($\delta$): <span id="offset-val" style="color: #f59e0b;">+0.08 rad</span></div>
+                <div>Calibrated Zero: <span style="color: #10b981;">0.00 rad (True Neutral)</span></div>
+            </div>
+            <input type="range" min="-20" max="20" value="8" id="cal-slider" oninput="updateCal()">
+            <p style="font-family: monospace; color: #10b981; font-size: 0.85em; margin-top: 8px;">Persistent config saved: /etc/microduck/calibration.json</p>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(4)">⬅️ Prev</button>
+            <button onclick="nextSlide(6)">Next: Telemetry Observability ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 6: TELEMETRY OBSERVABILITY -->
+    <div class="slide" id="slide-6">
+        <h1>6. Fleet Telemetry & Observability 📡</h1>
+        <p>When running a fleet of robots, we continuously monitor latency jitter, IMU tilt distributions, and hardware thermal limits.</p>
+        <p><strong>The 12YO Concept:</strong> Like an airplane's black box recorder. If the duck trips over a rug, we can look at the telemetry chart to see which motor slipped.</p>
+        <div class="interactive-zone">
+            <div style="display: flex; gap: 20px; width: 85%; font-family: monospace; font-size: 0.85em; text-align: left;">
+                <div style="flex: 1; background: #0f172a; border-left: 3px solid #10b981; padding: 10px; border-radius: 4px;">
+                    <b style="color: #10b981;">Telemetry Heartbeat:</b><br>
+                    • IMU Roll/Pitch: Stable<br>
+                    • Loop Time: 19.98 ms<br>
+                    • CPU Temp: 44.2 °C
+                </div>
+                <div style="flex: 1; background: #0f172a; border-left: 3px solid #38bdf8; padding: 10px; border-radius: 4px;">
+                    <b style="color: #38bdf8;">Safety Watchdog:</b><br>
+                    • Health Check: OK<br>
+                    • Recovery: Auto-reset<br>
+                    • Emergency Stop: Ready
+                </div>
+            </div>
+            <p style="font-size: 0.82em; color: #94a3b8; margin-top: 8px;">Real-time logging enables automated CI/CD validation before physical deployment.</p>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(5)">⬅️ Prev</button>
+            <button onclick="nextSlide(7)">Next: Knowledge Check 🧠 ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 7: KNOWLEDGE CHECK (5 QUESTIONS - SKIPPABLE) -->
+    <div class="slide" id="slide-7">
+        <h1>7. Phase 5 Knowledge Check 🧠</h1>
+        <p>Test your understanding of the Rust Embedded Daemon stack! Answer the 5 questions or skip.</p>
+        
+        <div class="quiz-container" id="quiz-container">
+            <!-- Q1 -->
+            <div class="question" id="q1">
+                <h4 style="color: #f59e0b; margin: 0 0 6px 0;">1. Why is Rust's zero-cost ownership model critical for 50Hz robot control?</h4>
+                <button class="mcq" onclick="checkAnswer(1, false, this)">A) Rust makes the batteries last for 100 years.</button>
+                <button class="mcq" onclick="checkAnswer(1, true, this)">B) It eliminates data races and memory leaks at compile time with zero Garbage Collection pauses.</button>
+                <button class="mcq" onclick="checkAnswer(1, false, this)">C) Rust models only work in headless simulation.</button>
+            </div>
+            <!-- Q2 -->
+            <div class="question" id="q2" style="display: none;">
+                <h4 style="color: #10b981; margin: 0 0 6px 0;">2. What is the primary role of the robotd daemon?</h4>
+                <button class="mcq" onclick="checkAnswer(2, true, this)">A) It acts as the 50Hz spinal cord, polling sensors, running ONNX inference, and firing motors.</button>
+                <button class="mcq" onclick="checkAnswer(2, false, this)">B) It renders high-poly 3D video game graphics.</button>
+                <button class="mcq" onclick="checkAnswer(2, false, this)">C) It browses the internet for walking videos.</button>
+            </div>
+            <!-- Q3 -->
+            <div class="question" id="q3" style="display: none;">
+                <h4 style="color: #38bdf8; margin: 0 0 6px 0;">3. Why does robotctl use a Unix Domain Socket (/var/run/robotd.sock) to communicate?</h4>
+                <button class="mcq" onclick="checkAnswer(3, false, this)">A) Because WiFi is illegal in robotics.</button>
+                <button class="mcq" onclick="checkAnswer(3, true, this)">B) It enables fast, non-blocking local IPC without delaying the real-time balance loop.</button>
+                <button class="mcq" onclick="checkAnswer(3, false, this)">C) To recharge the battery faster.</button>
+            </div>
+            <!-- Q4 -->
+            <div class="question" id="q4" style="display: none;">
+                <h4 style="color: #a855f7; margin: 0 0 6px 0;">4. What problem does configd solve on physical 3D-printed robots?</h4>
+                <button class="mcq" onclick="checkAnswer(4, true, this)">A) It applies motor zero-offsets to calibrate mechanical manufacturing imperfections.</button>
+                <button class="mcq" onclick="checkAnswer(4, false, this)">B) It changes the color of the robot's plastic.</button>
+                <button class="mcq" onclick="checkAnswer(4, false, this)">C) It deletes the ONNX model if the robot falls.</button>
+            </div>
+            <!-- Q5 -->
+            <div class="question" id="q5" style="display: none;">
+                <h4 style="color: #ef4444; margin: 0 0 6px 0;">5. What command triggers an immediate emergency shutdown via the CLI?</h4>
+                <button class="mcq" onclick="checkAnswer(5, false, this)">A) robotctl sleep</button>
+                <button class="mcq" onclick="checkAnswer(5, true, this)">B) robotctl stop --estop (or robotctl estop)</button>
+                <button class="mcq" onclick="checkAnswer(5, false, this)">C) robotctl restart</button>
+            </div>
+            
+            <p id="quiz-feedback" style="font-weight: bold; margin-top: 10px; margin-bottom: 0; min-height: 20px; font-size: 0.9em;"></p>
+        </div>
+
+        <div class="nav-buttons">
+            <button onclick="nextSlide(6)">⬅️ Prev</button>
+            <div>
+                <button onclick="skipQuiz()" style="background: #64748b; margin-right: 8px;">Skip Quiz ⏭️</button>
+                <button id="finish-btn" style="display: none;" onclick="alert('Phase 5 Complete! You have mastered the Rust Embedded Nervous System!')">Complete Phase 5 🎓</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Navigation ---
+        function nextSlide(slideNum) {
+            document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+            document.getElementById('slide-' + slideNum).classList.add('active');
+        }
+
+        // --- Slide 4: Interactive Terminal ---
+        function handleTerm(e) {
+            if (e.key === 'Enter') {
+                const input = document.getElementById('term-cmd');
+                const val = input.value.trim().toLowerCase();
+                const log = document.getElementById('term-log');
+                let resp = '';
+                
+                if (val === 'status') {
+                    resp = '● robotd: active (running) [50.0Hz | 0 drops | Batt: 92%]';
+                } else if (val === 'monitor') {
+                    resp = 'IMU: pitch=+0.02 roll=-0.01 | Latency: 2.3ms | Temp: 43.1C';
+                } else if (val === 'estop' || val.includes('stop')) {
+                    resp = '🛑 EMERGENCY STOP ACTIVATED: 15 Motors powered down to 0 PWM.';
+                } else {
+                    resp = 'Command not recognized. Try: status, monitor, or estop.';
+                }
+                
+                log.innerHTML += `<div><span style="color: #7ee787;">$ robotctl ${val}</span><br><span style="color: #c9d1d9;">${resp}</span></div>`;
+                input.value = '';
+                const box = document.getElementById('term-output');
+                box.scrollTop = box.scrollHeight;
+            }
+        }
+
+        // --- Slide 5: Calibration Slider ---
+        function updateCal() {
+            const val = (document.getElementById('cal-slider').value / 100).toFixed(2);
+            document.getElementById('offset-val').innerText = (val >= 0 ? "+" : "") + val + " rad";
+        }
+
+        // --- Slide 7: Quiz Logic (5 Questions) ---
+        function checkAnswer(qNum, isCorrect, btn) {
+            const feedback = document.getElementById('quiz-feedback');
+            const buttons = document.getElementById('q' + qNum).getElementsByTagName('button');
+            for(let b of buttons) { b.className = 'mcq'; }
+            
+            if (isCorrect) {
+                btn.classList.add('correct');
+                feedback.style.color = '#10b981';
+                feedback.innerText = "✅ Correct! Moving to next question...";
+                
+                setTimeout(() => {
+                    document.getElementById('q' + qNum).style.display = 'none';
+                    if (qNum < 5) {
+                        document.getElementById('q' + (qNum + 1)).style.display = 'block';
+                        feedback.innerText = "";
+                    } else {
+                        feedback.innerText = "🎉 100% Score! You mastered the Rust Embedded Nervous System.";
+                        document.getElementById('finish-btn').style.display = 'inline-block';
+                    }
+                }, 1000);
+            } else {
+                btn.classList.add('wrong');
+                feedback.style.color = '#ef4444';
+                feedback.innerText = "❌ Incorrect. Review the concepts and try again!";
+            }
+        }
+
+        function skipQuiz() {
+            for (let i = 1; i <= 5; i++) {
+                document.getElementById('q' + i).style.display = 'none';
+            }
+            document.getElementById('quiz-feedback').style.color = '#f59e0b';
+            document.getElementById('quiz-feedback').innerText = "⏭️ Quiz Skipped! Answers: 1-B, 2-A, 3-B, 4-A, 5-B";
+            document.getElementById('finish-btn').style.display = 'inline-block';
+        }
+    </script>
+</body>
+</html>

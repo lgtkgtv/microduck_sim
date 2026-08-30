@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microduck Masterclass: Phase 2 - The Invisible Matrix</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e1e; color: #ffffff; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .slide { display: none; width: 840px; height: 520px; background: #2d2d2d; border-radius: 12px; padding: 35px 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; position: relative; }
+        .slide.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        h1 { color: #00f0ff; margin-top: 0; font-size: 2.2em; }
+        p { font-size: 1.05em; line-height: 1.45; color: #cccccc; margin-bottom: 8px; }
+        .interactive-zone { margin-top: 15px; padding: 15px 20px; background: #1a1a1a; border-radius: 8px; border: 2px dashed #444; min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;}
+        .nav-buttons { position: absolute; bottom: 25px; width: calc(100% - 80px); display: flex; justify-content: space-between; }
+        button { background: #00f0ff; color: #0b132b; border: none; padding: 10px 22px; font-size: 1em; font-weight: bold; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #38bdf8; }
+        
+        /* Interactive Elements */
+        .tag-pill { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; font-weight: bold; background: #1e293b; color: #38bdf8; border: 1px solid #38bdf8; margin: 0 4px; }
+        input[type=range] { width: 70%; margin-top: 10px; cursor: pointer; }
+        
+        /* Slide 1: Model vs Data Memory Box */
+        .memory-box { display: flex; gap: 20px; width: 90%; justify-content: center; }
+        .mem-card { flex: 1; background: #242f3d; padding: 12px; border-radius: 6px; border-top: 3px solid #00f0ff; font-family: monospace; text-align: left; font-size: 0.9em; }
+        
+        /* Slide 2: Kinematic Joint Visualizer */
+        .joint-chain { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px; }
+        .joint-node { width: 90px; height: 45px; background: #0f172a; border: 2px solid #38bdf8; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: monospace; font-size: 0.8em; }
+        .joint-arrow { color: #f59e0b; font-weight: bold; font-size: 1.2em; }
+        
+        /* Slide 3: Geom & Physics Box */
+        .geom-sim { width: 60px; height: 60px; background: #10b981; border-radius: 8px; transition: transform 0.2s, background 0.2s; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #111; }
+        
+        /* Slide 4: Step Pulse */
+        .step-counter { font-size: 2.5em; font-family: monospace; color: #10b981; font-weight: bold; margin: 5px 0; }
+        
+        /* Slide 5: Code Toggle Box */
+        .code-box { background: #0d1117; color: #7ee787; padding: 10px 15px; border-radius: 6px; font-family: monospace; font-size: 0.85em; text-align: left; width: 85%; max-height: 110px; overflow-y: auto; }
+        
+        /* Slide 6: Singularity Switch */
+        .switch-btn { background: #ef4444; color: #fff; padding: 8px 16px; font-size: 0.9em; border-radius: 4px; }
+        
+        /* Slide 7: Quiz styling */
+        .mcq { background: #333; width: 100%; text-align: left; padding: 10px 14px; border-radius: 6px; font-weight: normal; font-size: 0.92em; color: #fff; margin-bottom: 6px; border: 1px solid #444; }
+        .mcq:hover { background: #444; }
+        .mcq.correct { background: #10b981 !important; color: #0b132b; font-weight: bold; }
+        .mcq.wrong { background: #ef4444 !important; color: #fff; }
+        .quiz-container { text-align: left; background: #1a1a1a; padding: 16px 20px; border-radius: 8px; max-height: 250px; }
+    </style>
+<body>
+    <a href="index.html" style="position: absolute; top: 16px; left: 24px; color: #94a3b8; text-decoration: none; font-size: 0.85em; font-weight: bold; background: rgba(30,41,59,0.7); backdrop-filter: blur(8px); padding: 6px 14px; border-radius: 6px; border: 1px solid #334155; z-index: 999; display: flex; align-items: center; gap: 6px;">🏠 <span>Curriculum Hub</span></a>
+
+    <!-- SLIDE 1: SANDBOX (MjModel vs MjData) -->
+    <div class="slide active" id="slide-1">
+        <h1>1. The Sandbox: MjModel vs MjData 📦</h1>
+        <p>MuJoCo splits the universe into two distinct memory graphs: the <strong>Immutable Physics Blueprint</strong> and the <strong>Live State Data</strong>.</p>
+        <p><strong>The 12YO Concept:</strong> <code>MjModel</code> is the rulebook of Monopoly (never changes). <code>MjData</code> is where all the player pieces and cash currently sit on the board.</p>
+        <div class="interactive-zone">
+            <div class="memory-box">
+                <div class="mem-card" style="border-top-color: #38bdf8;">
+                    <div style="color: #38bdf8; font-weight: bold;">📘 MjModel (Static Blueprint)</div>
+                    • Mass: m = 1.2 kg<br>
+                    • Joints: 15 DOFs<br>
+                    • Geometry: 15 Geoms<br>
+                    • Limits: [-1.0, 1.0]
+                </div>
+                <div class="mem-card" style="border-top-color: #10b981;">
+                    <div style="color: #10b981; font-weight: bold;">⚡ MjData (Dynamic State)</div>
+                    • Position: qpos = <span id="dyn-qpos">[0.0, 0.25, 0.0]</span><br>
+                    • Velocity: qvel = <span id="dyn-qvel">[0.0, 0.0, 0.0]</span><br>
+                    • Motor Torque: ctrl = <span id="dyn-ctrl">[0.0] * 15</span><br>
+                    • Time: t = <span id="dyn-t">0.000s</span>
+                </div>
+            </div>
+            <p style="margin-top: 10px; font-size: 0.85em; color: #94a3b8;">Falling in MuJoCo costs $0.00 and takes 0.2 milliseconds per step.</p>
+        </div>
+        <div class="nav-buttons">
+            <button style="visibility: hidden;">Prev</button>
+            <button onclick="nextSlide(2)">Next: Kinematic Trees ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: KINEMATIC TREES -->
+    <div class="slide" id="slide-2">
+        <h1>2. Kinematic Trees: Parent-Child DAGs 🌲</h1>
+        <p>Robots are not loose bags of parts; they are directed acyclic graphs (DAGs) of bones connected by rotational joints.</p>
+        <p><strong>The 12YO Concept:</strong> If you swing your shoulder, your elbow and hand move automatically because they are child links connected to your torso.</p>
+        <div class="interactive-zone">
+            <div class="joint-chain">
+                <div class="joint-node"><span style="color: #38bdf8;">Torso</span><small>base_link</small></div>
+                <span class="joint-arrow">➔</span>
+                <div class="joint-node"><span style="color: #10b981;">l_hip</span><small>Joint 0</small></div>
+                <span class="joint-arrow">➔</span>
+                <div class="joint-node"><span style="color: #f59e0b;">l_knee</span><small>Joint 3</small></div>
+                <span class="joint-arrow">➔</span>
+                <div class="joint-node" id="foot-node" style="border-color: #ef4444;"><span style="color: #ef4444;">l_foot</span><small id="foot-angle">0.00 rad</small></div>
+            </div>
+            <p style="margin-top: 12px; margin-bottom: 2px;">Adjust Hip Angle (Rotates entire leg subtree):</p>
+            <input type="range" min="-45" max="45" value="0" id="joint-slider" oninput="updateJointTree()">
+            <p style="font-family: monospace; color: #38bdf8; font-size: 0.9em; margin-top: 4px;">Subtree Forward Kinematics: T_world_foot = T_torso · T_hip · T_knee · T_foot</p>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(1)">⬅️ Prev</button>
+            <button onclick="nextSlide(3)">Next: Collision & Geoms ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: COLLISION & MASS (GEOMS) -->
+    <div class="slide" id="slide-3">
+        <h1>3. Collision & Mass: The Geoms 🧱</h1>
+        <p>Bones don't collide; <strong>Geoms</strong> do! Geoms wrap visual meshes with fast mathematical bounding volumes (capsules, boxes, planes).</p>
+        <p><strong>The 12YO Concept:</strong> Instead of calculating 50,000 tiny triangles on a foot mesh, the computer calculates a simple box hitting a floor.</p>
+        <div class="interactive-zone">
+            <div class="geom-sim" id="geom-box">Geom</div>
+            <div style="width: 80%; display: flex; justify-content: space-around; margin-top: 10px;">
+                <div>
+                    <label style="font-size: 0.85em; color: #38bdf8;">Mass (kg): <span id="mass-val">1.0</span></label><br>
+                    <input type="range" min="1" max="10" value="5" id="mass-slider" oninput="updateGeom()">
+                </div>
+                <div>
+                    <label style="font-size: 0.85em; color: #10b981;">Friction (μ): <span id="fric-val">0.8</span></label><br>
+                    <input type="range" min="1" max="20" value="8" id="fric-slider" oninput="updateGeom()">
+                </div>
+            </div>
+            <p style="font-family: monospace; color: #f59e0b; font-size: 0.85em; margin-top: 8px;">Contact Solver: Solref soft-constraint dynamics prevent infinite impact forces.</p>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(2)">⬅️ Prev</button>
+            <button onclick="nextSlide(4)">Next: Forward Dynamics ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 4: FORWARD DYNAMICS (mj_step) -->
+    <div class="slide" id="slide-4">
+        <h1>4. Forward Dynamics: mj_step() ⏱️</h1>
+        <p>Nothing moves in the virtual matrix until we command time to step forward by calling <code>mujoco.mj_step(model, data)</code>.</p>
+        <p><strong>The 12YO Concept:</strong> The physics engine is like a hyper-fast calculator doing 50 math puzzles every second to figure out where momentum pushes the duck.</p>
+        <div class="interactive-zone">
+            <div class="step-counter" id="step-count">0 Steps</div>
+            <p style="margin: 0; font-family: monospace; color: #38bdf8;">Simulated Physics Time: <span id="sim-time">0.000</span> s (Δt = 0.020s @ 50Hz)</p>
+            <div style="margin-top: 12px; display: flex; gap: 10px;">
+                <button onclick="triggerStep()">⚡ Step Once (mj_step)</button>
+                <button onclick="toggleLoop()" id="loop-btn" style="background: #10b981;">▶️ Run 50Hz Continuous</button>
+            </div>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(3)">⬅️ Prev</button>
+            <button onclick="nextSlide(5)">Next: The Wrapper Method ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 5: THE WRAPPER METHOD -->
+    <div class="slide" id="slide-5">
+        <h1>5. The Wrapper Method: XML Injection 🧬</h1>
+        <p>Vendor URDF files have bones but <strong>no motors</strong>. The Wrapper Method imports the URDF and injects 15 actuators on top without breaking the vendor file.</p>
+        <p><strong>The 12YO Concept:</strong> It is like downloading a character model in a video game and putting a motor engine inside its body.</p>
+        <div class="interactive-zone">
+            <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+                <button onclick="setXmlTab('wrapper')" style="padding: 5px 12px; font-size: 0.85em;">microduck_wrapper.xml</button>
+                <button onclick="setXmlTab('python')" style="padding: 5px 12px; font-size: 0.85em; background: #38bdf8;">compile_urdf.py</button>
+            </div>
+            <div class="code-box" id="code-content">
+&lt;mujoco model="microduck"&gt;
+  &lt;compiler angle="radian" autolimits="true"/&gt;
+  &lt;include file="microduck_vendor.urdf"/&gt;
+  &lt;actuator&gt;
+    &lt;motor joint="l_hip_yaw" name="motor_l0" ctrlrange="-1 1"/&gt;
+  &lt;/actuator&gt;
+&lt;/mujoco&gt;</div>
+            <p style="font-family: monospace; color: #10b981; font-size: 0.85em; margin-top: 6px;">Output: Compiled unified MjModel with model.njnt=15 and model.nu=15</p>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(4)">⬅️ Prev</button>
+            <button onclick="nextSlide(6)">Next: Autolimits Gotcha ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 6: AUTOLIMITS & INERTIA -->
+    <div class="slide" id="slide-6">
+        <h1>6. The Gotcha: Autolimits & Inertia ⚠️</h1>
+        <p>If a vendor URDF sets a link's mass to <code>0.0</code>, dividing by zero causes the duck to launch into the sky at infinite speed!</p>
+        <p><strong>The 12YO Concept:</strong> An object with zero weight breaks the laws of math. <code>autolimits="true"</code> is our mechanic that fixes missing mass automatically.</p>
+        <div class="interactive-zone">
+            <div id="singularity-box" style="font-size: 2.2em; transition: transform 0.3s;">🦆</div>
+            <p id="singularity-status" style="font-family: monospace; color: #10b981; margin: 8px 0;">Status: autolimits="true" (Stable Physics - Mass Inferred)</p>
+            <button class="switch-btn" onclick="toggleSingularity()" id="sing-btn">Test Zero-Mass Glitch (Divide by Zero)</button>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(5)">⬅️ Prev</button>
+            <button onclick="nextSlide(7)">Next: Knowledge Check 🧠 ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 7: KNOWLEDGE CHECK (5 QUESTIONS - SKIPPABLE) -->
+    <div class="slide" id="slide-7">
+        <h1>7. Phase 2 Knowledge Check 🧠</h1>
+        <p>Test your understanding of the MuJoCo physics matrix! Answer the 5 questions or skip to complete.</p>
+        
+        <div class="quiz-container" id="quiz-container">
+            <!-- Q1 -->
+            <div class="question" id="q1">
+                <h4 style="color: #38bdf8; margin: 0 0 6px 0;">1. What is the key difference between MjModel and MjData?</h4>
+                <button class="mcq" onclick="checkAnswer(1, false, this)">A) MjModel changes constantly while MjData is frozen.</button>
+                <button class="mcq" onclick="checkAnswer(1, true, this)">B) MjModel is the static physics blueprint; MjData holds the live state (qpos, qvel).</button>
+                <button class="mcq" onclick="checkAnswer(1, false, this)">C) MjData only stores camera pictures.</button>
+            </div>
+            <!-- Q2 -->
+            <div class="question" id="q2" style="display: none;">
+                <h4 style="color: #10b981; margin: 0 0 6px 0;">2. Why do we use Geoms instead of high-poly 3D meshes for physics contacts?</h4>
+                <button class="mcq" onclick="checkAnswer(2, true, this)">A) Bounding shapes like capsules and boxes make collision math 100x faster.</button>
+                <button class="mcq" onclick="checkAnswer(2, false, this)">B) Meshes cannot have any color in MuJoCo.</button>
+                <button class="mcq" onclick="checkAnswer(2, false, this)">C) Geoms prevent gravity from affecting the robot.</button>
+            </div>
+            <!-- Q3 -->
+            <div class="question" id="q3" style="display: none;">
+                <h4 style="color: #f59e0b; margin: 0 0 6px 0;">3. What does calling mujoco.mj_step(model, data) do?</h4>
+                <button class="mcq" onclick="checkAnswer(3, false, this)">A) It restarts the computer operating system.</button>
+                <button class="mcq" onclick="checkAnswer(3, true, this)">B) It calculates forces, momentum, and integrates time forward by one Δt step.</button>
+                <button class="mcq" onclick="checkAnswer(3, false, this)">C) It converts PyTorch code into C++ automatically.</button>
+            </div>
+            <!-- Q4 -->
+            <div class="question" id="q4" style="display: none;">
+                <h4 style="color: #a855f7; margin: 0 0 6px 0;">4. Why do we use an MJCF Wrapper instead of directly editing the vendor URDF?</h4>
+                <button class="mcq" onclick="checkAnswer(4, true, this)">A) It injects 15 motors and physics rules without modifying the vendor's source file.</button>
+                <button class="mcq" onclick="checkAnswer(4, false, this)">B) URDF files cannot be read by Python.</button>
+                <button class="mcq" onclick="checkAnswer(4, false, this)">C) It makes the robot 50% lighter.</button>
+            </div>
+            <!-- Q5 -->
+            <div class="question" id="q5" style="display: none;">
+                <h4 style="color: #ef4444; margin: 0 0 6px 0;">5. What happens if autolimits="true" is omitted and a vendor link has mass=0.0?</h4>
+                <button class="mcq" onclick="checkAnswer(5, false, this)">A) The robot moves normally.</button>
+                <button class="mcq" onclick="checkAnswer(5, true, this)">B) Division by zero occurs and the physics simulation explodes at infinite velocity.</button>
+                <button class="mcq" onclick="checkAnswer(5, false, this)">C) The battery recharges instantly.</button>
+            </div>
+            
+            <p id="quiz-feedback" style="font-weight: bold; margin-top: 10px; margin-bottom: 0; min-height: 20px; font-size: 0.9em;"></p>
+        </div>
+
+        <div class="nav-buttons">
+            <button onclick="nextSlide(6)">⬅️ Prev</button>
+            <div>
+                <button onclick="skipQuiz()" style="background: #64748b; margin-right: 8px;">Skip Quiz ⏭️</button>
+                <button id="finish-btn" style="display: none;" onclick="alert('Phase 2 Complete! Ready for Phase 3: The Dog Trainer!')">Complete Phase 2 ✅</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Navigation ---
+        function nextSlide(slideNum) {
+            document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+            document.getElementById('slide-' + slideNum).classList.add('active');
+        }
+
+        // --- Slide 2: Kinematic Slider ---
+        function updateJointTree() {
+            const val = document.getElementById('joint-slider').value;
+            const rad = (val * Math.PI / 180).toFixed(2);
+            document.getElementById('foot-angle').innerText = rad + " rad";
+            document.getElementById('foot-node').style.transform = `rotate(${val}deg)`;
+        }
+
+        // --- Slide 3: Geom Sim ---
+        function updateGeom() {
+            const m = document.getElementById('mass-slider').value / 5;
+            const f = document.getElementById('fric-slider').value / 10;
+            document.getElementById('mass-val').innerText = m.toFixed(1);
+            document.getElementById('fric-val').innerText = f.toFixed(1);
+            const scale = 0.8 + (m * 0.2);
+            document.getElementById('geom-box').style.transform = `scale(${scale})`;
+        }
+
+        // --- Slide 4: Forward Dynamics Loop ---
+        let steps = 0;
+        let running = false;
+        let intervalId = null;
+        function triggerStep() {
+            steps++;
+            document.getElementById('step-count').innerText = steps + " Steps";
+            document.getElementById('sim-time').innerText = (steps * 0.02).toFixed(3);
+        }
+        function toggleLoop() {
+            running = !running;
+            const btn = document.getElementById('loop-btn');
+            if (running) {
+                btn.innerText = "⏸️ Pause Loop";
+                btn.style.background = "#ef4444";
+                intervalId = setInterval(triggerStep, 50);
+            } else {
+                btn.innerText = "▶️ Run 50Hz Continuous";
+                btn.style.background = "#10b981";
+                clearInterval(intervalId);
+            }
+        }
+
+        // --- Slide 5: Code Switcher ---
+        const codeSnippets = {
+            wrapper: `<mujoco model="microduck">\n  <compiler angle="radian" autolimits="true"/>\n  <include file="microduck_vendor.urdf"/>\n  <actuator>\n    <motor joint="l_hip_yaw" name="motor_l0" ctrlrange="-1 1"/>\n  </actuator>\n</mujoco>`,
+            python: `import mujoco\nmodel = mujoco.MjModel.from_xml_path("microduck_wrapper.xml")\nmujoco.mj_saveLastXML("microduck_final.xml", model)\nprint(f"Joints: {model.njnt}, Actuators: {model.nu}")`
+        };
+        function setXmlTab(tab) {
+            document.getElementById('code-content').innerText = codeSnippets[tab];
+        }
+
+        // --- Slide 6: Singularity Exploder ---
+        let glitched = false;
+        function toggleSingularity() {
+            glitched = !glitched;
+            const duck = document.getElementById('singularity-box');
+            const status = document.getElementById('singularity-status');
+            const btn = document.getElementById('sing-btn');
+            if (glitched) {
+                duck.style.transform = "translateY(-120px) rotate(720deg) scale(0.2)";
+                status.innerText = "💥 GLITCH: mass=0.0 → Acceleration=NaN! Duck vanished into stratosphere!";
+                status.style.color = "#ef4444";
+                btn.innerText = "Reset with autolimits='true'";
+                btn.style.background = "#10b981";
+            } else {
+                duck.style.transform = "translateY(0) rotate(0deg) scale(1.0)";
+                status.innerText = "Status: autolimits='true' (Stable Physics - Mass Inferred)";
+                status.style.color = "#10b981";
+                btn.innerText = "Test Zero-Mass Glitch (Divide by Zero)";
+                btn.style.background = "#ef4444";
+            }
+        }
+
+        // --- Slide 7: Quiz Logic (5 Questions) ---
+        function checkAnswer(qNum, isCorrect, btn) {
+            const feedback = document.getElementById('quiz-feedback');
+            const buttons = document.getElementById('q' + qNum).getElementsByTagName('button');
+            for(let b of buttons) { b.className = 'mcq'; }
+            
+            if (isCorrect) {
+                btn.classList.add('correct');
+                feedback.style.color = '#10b981';
+                feedback.innerText = "✅ Correct! Moving to next question...";
+                
+                setTimeout(() => {
+                    document.getElementById('q' + qNum).style.display = 'none';
+                    if (qNum < 5) {
+                        document.getElementById('q' + (qNum + 1)).style.display = 'block';
+                        feedback.innerText = "";
+                    } else {
+                        feedback.innerText = "🎉 100% Score! You mastered the Physics Matrix.";
+                        document.getElementById('finish-btn').style.display = 'inline-block';
+                    }
+                }, 1000);
+            } else {
+                btn.classList.add('wrong');
+                feedback.style.color = '#ef4444';
+                feedback.innerText = "❌ Incorrect. Review the concepts and try again!";
+            }
+        }
+
+        function skipQuiz() {
+            for (let i = 1; i <= 5; i++) {
+                document.getElementById('q' + i).style.display = 'none';
+            }
+            document.getElementById('quiz-feedback').style.color = '#38bdf8';
+            document.getElementById('quiz-feedback').innerText = "⏭️ Quiz Skipped! Answers: 1-B, 2-A, 3-B, 4-A, 5-B";
+            document.getElementById('finish-btn').style.display = 'inline-block';
+        }
+    </script>
+</body>
+</html>

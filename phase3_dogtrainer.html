@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microduck Masterclass: Phase 3 - The Dog Trainer</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e1e; color: #ffffff; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .slide { display: none; width: 840px; height: 520px; background: #2d2d2d; border-radius: 12px; padding: 35px 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; position: relative; }
+        .slide.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        h1 { color: #f59e0b; margin-top: 0; font-size: 2.2em; }
+        p { font-size: 1.05em; line-height: 1.45; color: #cccccc; margin-bottom: 8px; }
+        .interactive-zone { margin-top: 15px; padding: 15px 20px; background: #1a1a1a; border-radius: 8px; border: 2px dashed #444; min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;}
+        .nav-buttons { position: absolute; bottom: 25px; width: calc(100% - 80px); display: flex; justify-content: space-between; }
+        button { background: #f59e0b; color: #0b132b; border: none; padding: 10px 22px; font-size: 1em; font-weight: bold; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #fbbf24; }
+        
+        input[type=range] { width: 70%; margin-top: 10px; cursor: pointer; }
+        
+        /* Slide 1: Gym Loop Box */
+        .gym-grid { display: flex; gap: 15px; width: 90%; justify-content: center; align-items: center; }
+        .gym-node { flex: 1; background: #242f3d; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.85em; text-align: left; }
+        
+        /* Slide 2: Reward Calculator */
+        .reward-meter { font-size: 2.2em; font-family: monospace; color: #10b981; font-weight: bold; }
+        .reward-row { display: flex; justify-content: space-between; width: 80%; font-size: 0.88em; margin: 3px 0; }
+        
+        /* Slide 3: PPO Clip Visualizer */
+        .clip-bar { width: 80%; height: 35px; background: #0f172a; border-radius: 6px; position: relative; border: 1px solid #444; display: flex; align-items: center; justify-content: center; }
+        .clip-zone { height: 100%; background: rgba(16, 185, 129, 0.25); border-left: 2px dashed #10b981; border-right: 2px dashed #10b981; position: absolute; }
+        
+        /* Slide 4: Clamp Indicator */
+        .clamp-display { display: flex; gap: 30px; align-items: center; font-family: monospace; font-size: 1.1em; }
+        
+        /* Slide 5: Memory Buffer */
+        .buffer-grid { display: flex; gap: 8px; }
+        .buffer-frame { width: 65px; height: 50px; background: #0f172a; border: 2px solid #38bdf8; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: monospace; font-size: 0.75em; }
+        
+        /* Slide 6: Curriculum Ladder */
+        .stage-pills { display: flex; gap: 10px; margin-top: 10px; }
+        .stage-btn { background: #1e293b; color: #94a3b8; border: 1px solid #475569; padding: 8px 14px; border-radius: 6px; font-size: 0.85em; cursor: pointer; }
+        .stage-btn.active { background: #f59e0b; color: #0b132b; font-weight: bold; border-color: #fbbf24; }
+        
+        /* Slide 7: Quiz styling */
+        .mcq { background: #333; width: 100%; text-align: left; padding: 10px 14px; border-radius: 6px; font-weight: normal; font-size: 0.92em; color: #fff; margin-bottom: 6px; border: 1px solid #444; }
+        .mcq:hover { background: #444; }
+        .mcq.correct { background: #10b981 !important; color: #0b132b; font-weight: bold; }
+        .mcq.wrong { background: #ef4444 !important; color: #fff; }
+        .quiz-container { text-align: left; background: #1a1a1a; padding: 16px 20px; border-radius: 8px; max-height: 250px; }
+    </style>
+<body>
+    <a href="index.html" style="position: absolute; top: 16px; left: 24px; color: #94a3b8; text-decoration: none; font-size: 0.85em; font-weight: bold; background: rgba(30,41,59,0.7); backdrop-filter: blur(8px); padding: 6px 14px; border-radius: 6px; border: 1px solid #334155; z-index: 999; display: flex; align-items: center; gap: 6px;">🏠 <span>Curriculum Hub</span></a>
+
+    <!-- SLIDE 1: THE GYM RULES -->
+    <div class="slide active" id="slide-1">
+        <h1>1. The Gym Rules: Observation & Action 🏋️</h1>
+        <p>In Reinforcement Learning, we don't code walking trajectories. We define <strong>what the robot sees</strong> (Observation) and <strong>what it can move</strong> (Action).</p>
+        <p><strong>The 12YO Concept:</strong> If you train a dog, you don't pick up its paws. You show it the treat, observe what it does, and give feedback.</p>
+        <div class="interactive-zone">
+            <div class="gym-grid">
+                <div class="gym-node" style="border-top: 3px solid #38bdf8;">
+                    <span style="color: #38bdf8; font-weight: bold;">👁️ Observation (s_t)</span><br>
+                    • IMU Orient: [φ, θ, ψ]<br>
+                    • Gyroscope: [ωx, ωy, ωz]<br>
+                    • Joint Encoders: 15 angles<br>
+                    • 4-Frame Buffer: <b>60 Floats</b>
+                </div>
+                <div style="font-size: 1.5em; color: #f59e0b; font-weight: bold;">➔</div>
+                <div class="gym-node" style="border-top: 3px solid #10b981;">
+                    <span style="color: #10b981; font-weight: bold;">⚡ Action (a_t)</span><br>
+                    • 15 Motor Targets<br>
+                    • Normalized: [-1.0, 1.0]<br>
+                    • Rate: 50 Hz (20ms)<br>
+                    • Mode: PD Velocity
+                </div>
+            </div>
+            <p style="margin-top: 10px; font-size: 0.85em; color: #94a3b8;">Cadence: Observation in → ONNX Inference (2.5ms) → Action out → Sleep (17.5ms)</p>
+        </div>
+        <div class="nav-buttons">
+            <button style="visibility: hidden;">Prev</button>
+            <button onclick="nextSlide(2)">Next: The Biscuit Math ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: REWARD FUNCTIONS -->
+    <div class="slide" id="slide-2">
+        <h1>2. The Reward Function: Biscuit Math 🍪</h1>
+        <p>The AI is greedy—it will exploit any loophole to maximize score. We must balance <strong>positive progress</strong> against <strong>destructive motor thrashing</strong>.</p>
+        <p><strong>The 12YO Concept:</strong> If you only give points for moving fast, the duck might throw itself down the stairs. You must penalize falling and motor shaking.</p>
+        <div class="interactive-zone">
+            <div class="reward-meter" id="total-reward">+2.75 pts</div>
+            <div style="width: 80%; margin-top: 8px;">
+                <div class="reward-row"><span>Upright Bonus (Torso Z):</span><span id="r-up" style="color: #10b981;">+1.00</span></div>
+                <div class="reward-row"><span>Forward Velocity (v_x):</span><span id="r-vel" style="color: #38bdf8;">+2.00</span></div>
+                <div class="reward-row"><span>Torque Penalty (-||τ||²):</span><span id="r-tau" style="color: #ef4444;">-0.25</span></div>
+            </div>
+            <input type="range" min="0" max="20" value="10" id="vel-slider" oninput="updateReward()" style="margin-top: 6px;">
+            <p style="font-size: 0.82em; color: #94a3b8; margin: 4px 0 0 0;">Drag slider to change forward speed and observe reward penalty trade-off.</p>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(1)">⬅️ Prev</button>
+            <button onclick="nextSlide(3)">Next: Actor-Critic & PPO ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: ACTOR-CRITIC & PPO -->
+    <div class="slide" id="slide-3">
+        <h1>3. Actor-Critic & PPO: Coach vs Athlete 🥋</h1>
+        <p>PPO (Proximal Policy Optimization) uses two neural networks working together: the <strong>Athlete (Actor)</strong> and the <strong>Coach (Critic)</strong>.</p>
+        <p><strong>The 12YO Concept:</strong> The Athlete tries a cartwheel. The Coach rates how good it was. PPO stops the Athlete from making crazy changes that erase what it learned.</p>
+        <div class="interactive-zone">
+            <div class="clip-bar">
+                <div class="clip-zone" style="left: 30%; width: 40%;"></div>
+                <div id="policy-dot" style="width: 14px; height: 14px; background: #f59e0b; border-radius: 50%; position: absolute; left: 50%; transform: translateX(-50%);"></div>
+            </div>
+            <p style="font-family: monospace; font-size: 0.88em; margin: 10px 0 4px 0;">PPO Ratio r(θ): <span id="ppo-ratio" style="color: #10b981;">1.00</span> (Clipped Zone: 1-ε to 1+ε)</p>
+            <input type="range" min="50" max="150" value="100" id="ppo-slider" oninput="updatePPO()">
+            <p id="ppo-feedback" style="font-size: 0.82em; color: #10b981; margin: 4px 0 0 0;">✅ Within Safe Clipping Envelope: Smooth gradient updates.</p>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(2)">⬅️ Prev</button>
+            <button onclick="nextSlide(4)">Next: The Hardware Clamp ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 4: THE HARDWARE CLAMP -->
+    <div class="slide" id="slide-4">
+        <h1>4. The Hardware Clamp: Silicon Safety 🛡️</h1>
+        <p>Neural networks can accidentally output wild numbers like <code>+5.8</code> or <code>-10.2</code>. On a physical robot, this would strip the nylon gears instantly.</p>
+        <p><strong>The 12YO Concept:</strong> We bake <code>torch.clamp()</code> directly into the ONNX brain so that no matter what, the math physically cannot exceed <code>[-1.0, 1.0]</code>.</p>
+        <div class="interactive-zone">
+            <div class="clamp-display">
+                <div>Raw AI Output:<br><span id="raw-out" style="color: #ef4444; font-size: 1.3em;">+2.40</span></div>
+                <div style="font-size: 1.5em; color: #f59e0b;">➔ torch.clamp(-1, 1) ➔</div>
+                <div>Motor Signal:<br><span id="clamped-out" style="color: #10b981; font-size: 1.3em;">+1.00</span></div>
+            </div>
+            <input type="range" min="-300" max="300" value="240" id="clamp-slider" oninput="updateClamp()">
+            <p style="font-size: 0.85em; color: #38bdf8; margin-top: 8px;">Mathematical guarantee: 100% immune to gear stripping in hardware.</p>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(3)">⬅️ Prev</button>
+            <button onclick="nextSlide(5)">Next: Temporal Memory ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 5: TEMPORAL MEMORY -->
+    <div class="slide" id="slide-5">
+        <h1>5. Temporal Memory: The Sliding Window 🌊</h1>
+        <p>A single frame of data only shows position—not momentum! To know if it is falling forward, the AI needs a fixed history of frames.</p>
+        <p><strong>The 12YO Concept:</strong> A photo can't tell you if a ball is flying up or falling down. You need 4 frames of video to see the direction.</p>
+        <div class="interactive-zone">
+            <div class="buffer-grid">
+                <div class="buffer-frame"><span style="color: #94a3b8;">t - 3</span><small>15 floats</small></div>
+                <div class="buffer-frame"><span style="color: #94a3b8;">t - 2</span><small>15 floats</small></div>
+                <div class="buffer-frame"><span style="color: #38bdf8;">t - 1</span><small>15 floats</small></div>
+                <div class="buffer-frame" style="border-color: #10b981;"><span style="color: #10b981;">t (New)</span><small id="new-tag">Frame #0</small></div>
+            </div>
+            <p style="font-family: monospace; color: #38bdf8; font-size: 0.9em; margin: 12px 0 6px 0;">deque(maxlen=4) → Total State Shape: [1, 60] Floats</p>
+            <button onclick="pushFrame()" style="padding: 6px 16px; font-size: 0.88em;">📥 Push New 50Hz Sensor Frame</button>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(4)">⬅️ Prev</button>
+            <button onclick="nextSlide(6)">Next: Curriculum Learning ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 6: CURRICULUM LEARNING -->
+    <div class="slide" id="slide-6">
+        <h1>6. Curriculum Learning: From Crawling to Walking 🪜</h1>
+        <p>If you put a baby directly on a marathon track, it will never learn to run. We train the Microduck in <strong>4 progressive stages</strong>.</p>
+        <p><strong>The 12YO Concept:</strong> First learn to balance on two feet. Then recover from gentle shoves. Then take a step. Then walk on rough carpet.</p>
+        <div class="interactive-zone">
+            <div class="stage-pills">
+                <div class="stage-btn active" id="stg-1" onclick="setStage(1)">1. Stand Still</div>
+                <div class="stage-btn" id="stg-2" onclick="setStage(2)">2. Push Recovery</div>
+                <div class="stage-btn" id="stg-3" onclick="setStage(3)">3. Forward Walk</div>
+                <div class="stage-btn" id="stg-4" onclick="setStage(4)">4. Sim-to-Real</div>
+            </div>
+            <div id="stage-desc" style="background: #242f3d; padding: 12px 20px; border-radius: 6px; font-family: monospace; font-size: 0.85em; text-align: left; width: 80%; margin-top: 10px; border-left: 4px solid #f59e0b;">
+                <b>Stage 1: Stand Still</b><br>
+                • Goal: Maintain torso height Z > 0.22m<br>
+                • Steps: 200,000 | Falling penalty: -10 pts
+            </div>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(5)">⬅️ Prev</button>
+            <button onclick="nextSlide(7)">Next: Knowledge Check 🧠 ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 7: KNOWLEDGE CHECK (5 QUESTIONS - SKIPPABLE) -->
+    <div class="slide" id="slide-7">
+        <h1>7. Phase 3 Knowledge Check 🧠</h1>
+        <p>Test your understanding of Reinforcement Learning & PPO! Answer the 5 questions or skip to complete.</p>
+        
+        <div class="quiz-container" id="quiz-container">
+            <!-- Q1 -->
+            <div class="question" id="q1">
+                <h4 style="color: #f59e0b; margin: 0 0 6px 0;">1. How many float values make up the Microduck's 4-frame observation vector?</h4>
+                <button class="mcq" onclick="checkAnswer(1, false, this)">A) 15 floats</button>
+                <button class="mcq" onclick="checkAnswer(1, true, this)">B) 60 floats (4 historical frames × 15 sensors)</button>
+                <button class="mcq" onclick="checkAnswer(1, false, this)">C) 1,000 floats</button>
+            </div>
+            <!-- Q2 -->
+            <div class="question" id="q2" style="display: none;">
+                <h4 style="color: #10b981; margin: 0 0 6px 0;">2. Why must reward functions include a negative torque penalty term (-||τ||²)?</h4>
+                <button class="mcq" onclick="checkAnswer(2, true, this)">A) To prevent high-frequency motor shaking and conserve battery power.</button>
+                <button class="mcq" onclick="checkAnswer(2, false, this)">B) Because torque is not real in physics.</button>
+                <button class="mcq" onclick="checkAnswer(2, false, this)">C) To make the robot walk backwards.</button>
+            </div>
+            <!-- Q3 -->
+            <div class="question" id="q3" style="display: none;">
+                <h4 style="color: #38bdf8; margin: 0 0 6px 0;">3. In Actor-Critic architectures, what is the role of the Critic?</h4>
+                <button class="mcq" onclick="checkAnswer(3, false, this)">A) It sends PWM commands to the servo motors.</button>
+                <button class="mcq" onclick="checkAnswer(3, true, this)">B) It acts as the Coach, estimating the expected future reward score V(s).</button>
+                <button class="mcq" onclick="checkAnswer(3, false, this)">C) It cools down the CPU chip.</button>
+            </div>
+            <!-- Q4 -->
+            <div class="question" id="q4" style="display: none;">
+                <h4 style="color: #a855f7; margin: 0 0 6px 0;">4. Why is torch.clamp() baked directly into the ONNX model before export?</h4>
+                <button class="mcq" onclick="checkAnswer(4, true, this)">A) To guarantee motor signals never exceed [-1.0, 1.0], preventing hardware breakage.</button>
+                <button class="mcq" onclick="checkAnswer(4, false, this)">B) To make the file size smaller.</button>
+                <button class="mcq" onclick="checkAnswer(4, false, this)">C) To turn on the LiDAR sensor.</button>
+            </div>
+            <!-- Q5 -->
+            <div class="question" id="q5" style="display: none;">
+                <h4 style="color: #ef4444; margin: 0 0 6px 0;">5. What is Domain Randomization during curriculum training?</h4>
+                <button class="mcq" onclick="checkAnswer(5, false, this)">A) Playing random music while training.</button>
+                <button class="mcq" onclick="checkAnswer(5, true, this)">B) Randomly varying friction, mass, and latencies in sim so the AI transfers robustly to reality.</button>
+                <button class="mcq" onclick="checkAnswer(5, false, this)">C) Randomly turning off the computer.</button>
+            </div>
+            
+            <p id="quiz-feedback" style="font-weight: bold; margin-top: 10px; margin-bottom: 0; min-height: 20px; font-size: 0.9em;"></p>
+        </div>
+
+        <div class="nav-buttons">
+            <button onclick="nextSlide(6)">⬅️ Prev</button>
+            <div>
+                <button onclick="skipQuiz()" style="background: #64748b; margin-right: 8px;">Skip Quiz ⏭️</button>
+                <button id="finish-btn" style="display: none;" onclick="alert('Masterclass Complete! You have mastered Physical AI Embodied Control!')">Complete Masterclass 🎓</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Navigation ---
+        function nextSlide(slideNum) {
+            document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+            document.getElementById('slide-' + slideNum).classList.add('active');
+        }
+
+        // --- Slide 2: Reward Function Calc ---
+        function updateReward() {
+            const v = document.getElementById('vel-slider').value / 10;
+            const r_up = 1.0;
+            const r_vel = (2.0 * v);
+            const r_tau = (0.25 * (v * 1.2));
+            const total = (r_up + r_vel - r_tau).toFixed(2);
+            document.getElementById('r-vel').innerText = "+" + r_vel.toFixed(2);
+            document.getElementById('r-tau').innerText = "-" + r_tau.toFixed(2);
+            document.getElementById('total-reward').innerText = (total >= 0 ? "+" : "") + total + " pts";
+        }
+
+        // --- Slide 3: PPO Ratio Slider ---
+        function updatePPO() {
+            const val = document.getElementById('ppo-slider').value / 100;
+            document.getElementById('ppo-ratio').innerText = val.toFixed(2);
+            const posPct = 30 + ((val - 0.5) / 1.0) * 40;
+            document.getElementById('policy-dot').style.left = posPct + "%";
+            const fb = document.getElementById('ppo-feedback');
+            if (val >= 0.8 && val <= 1.2) {
+                fb.innerText = "✅ Within Safe Clipping Envelope: Smooth gradient updates.";
+                fb.style.color = "#10b981";
+            } else {
+                fb.innerText = "⚠️ Outside Clip Boundary: Objective clipped to prevent policy collapse!";
+                fb.style.color = "#ef4444";
+            }
+        }
+
+        // --- Slide 4: Clamp Slider ---
+        function updateClamp() {
+            const raw = (document.getElementById('clamp-slider').value / 100).toFixed(2);
+            const clamped = Math.max(-1.0, Math.min(1.0, parseFloat(raw))).toFixed(2);
+            document.getElementById('raw-out').innerText = (raw > 0 ? "+" : "") + raw;
+            document.getElementById('clamped-out').innerText = (clamped > 0 ? "+" : "") + clamped;
+        }
+
+        // --- Slide 5: Memory Buffer Push ---
+        let frameCount = 0;
+        function pushFrame() {
+            frameCount++;
+            document.getElementById('new-tag').innerText = "Frame #" + frameCount;
+        }
+
+        // --- Slide 6: Curriculum Stages ---
+        const stagesData = {
+            1: { title: "Stage 1: Stand Still", desc: "• Goal: Maintain torso height Z > 0.22m\\n• Steps: 200,000 | Falling penalty: -10 pts\\n• Output: Stable equilibrium stance" },
+            2: { title: "Stage 2: Push Recovery", desc: "• Goal: Absorb lateral impulse shoves (±15N)\\n• Steps: 500,000 | High ankle stiffness\\n• Output: Reflexive balance corrections" },
+            3: { title: "Stage 3: Forward Gait", desc: "• Goal: Walk forward at 0.4 m/s\\n• Steps: 1,200,000 | Alternating contact gait\\n• Output: Smooth rhythmic bipedal walking" },
+            4: { title: "Stage 4: Sim-to-Real", desc: "• Goal: Domain Randomization (Mass ±15%, Friction ±20%)\\n• Steps: 2,500,000 | Latency jitter injection\\n• Output: Zero-shot deployment to physical robot" }
+        };
+        function setStage(stg) {
+            for (let i = 1; i <= 4; i++) {
+                document.getElementById('stg-' + i).classList.remove('active');
+            }
+            document.getElementById('stg-' + stg).classList.add('active');
+            const d = stagesData[stg];
+            document.getElementById('stage-desc').innerHTML = `<b>${d.title}</b><br>${d.desc.replace(/\\n/g, '<br>')}`;
+        }
+
+        // --- Slide 7: Quiz Logic (5 Questions) ---
+        function checkAnswer(qNum, isCorrect, btn) {
+            const feedback = document.getElementById('quiz-feedback');
+            const buttons = document.getElementById('q' + qNum).getElementsByTagName('button');
+            for(let b of buttons) { b.className = 'mcq'; }
+            
+            if (isCorrect) {
+                btn.classList.add('correct');
+                feedback.style.color = '#10b981';
+                feedback.innerText = "✅ Correct! Moving to next question...";
+                
+                setTimeout(() => {
+                    document.getElementById('q' + qNum).style.display = 'none';
+                    if (qNum < 5) {
+                        document.getElementById('q' + (qNum + 1)).style.display = 'block';
+                        feedback.innerText = "";
+                    } else {
+                        feedback.innerText = "🎉 100% Score! You mastered RL & PPO Training.";
+                        document.getElementById('finish-btn').style.display = 'inline-block';
+                    }
+                }, 1000);
+            } else {
+                btn.classList.add('wrong');
+                feedback.style.color = '#ef4444';
+                feedback.innerText = "❌ Incorrect. Review the concepts and try again!";
+            }
+        }
+
+        function skipQuiz() {
+            for (let i = 1; i <= 5; i++) {
+                document.getElementById('q' + i).style.display = 'none';
+            }
+            document.getElementById('quiz-feedback').style.color = '#f59e0b';
+            document.getElementById('quiz-feedback').innerText = "⏭️ Quiz Skipped! Answers: 1-B, 2-A, 3-B, 4-A, 5-B";
+            document.getElementById('finish-btn').style.display = 'inline-block';
+        }
+    </script>
+</body>
+</html>

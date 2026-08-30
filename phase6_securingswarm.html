@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microduck Masterclass: Phase 6 - Securing the Swarm (DevSecOps for Physical AI)</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e1e; color: #ffffff; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .slide { display: none; width: 840px; height: 520px; background: #2d2d2d; border-radius: 12px; padding: 35px 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; position: relative; }
+        .slide.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        h1 { color: #10b981; margin-top: 0; font-size: 2.2em; }
+        p { font-size: 1.05em; line-height: 1.45; color: #cccccc; margin-bottom: 8px; }
+        .interactive-zone { margin-top: 15px; padding: 15px 20px; background: #1a1a1a; border-radius: 8px; border: 2px dashed #444; min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;}
+        .nav-buttons { position: absolute; bottom: 25px; width: calc(100% - 80px); display: flex; justify-content: space-between; }
+        button { background: #10b981; color: #0b132b; border: none; padding: 10px 22px; font-size: 1em; font-weight: bold; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #34d399; }
+        
+        input[type=range] { width: 70%; margin-top: 10px; cursor: pointer; }
+        
+        /* Slide 1: A/B Slots */
+        .slot-container { display: flex; gap: 20px; width: 90%; justify-content: center; }
+        .slot-box { flex: 1; background: #0f172a; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.82em; text-align: left; border: 2px solid #444; }
+        
+        /* Slide 2: CI Progress */
+        .ci-progress-bar { width: 85%; height: 22px; background: #0f172a; border-radius: 6px; overflow: hidden; border: 1px solid #444; margin-top: 10px; }
+        .ci-fill { width: 0%; height: 100%; background: #10b981; transition: width 0.3s; display: flex; align-items: center; justify-content: center; font-family: monospace; font-size: 0.75em; font-weight: bold; color: #0b132b; }
+        
+        /* Slide 3: Crypto Lock */
+        .crypto-box { display: flex; gap: 15px; width: 90%; justify-content: center; align-items: center; }
+
+        /* Slide 4: Telemetry Gauges */
+        .gauge-row { display: flex; gap: 12px; width: 90%; justify-content: center; }
+        .gauge-card { flex: 1; background: #0f172a; padding: 10px; border-radius: 6px; border-top: 3px solid #38bdf8; font-family: monospace; font-size: 0.8em; text-align: center; }
+
+        /* Slide 6: Swarm Grid */
+        .swarm-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; width: 85%; }
+        .swarm-duck { background: #0f172a; border: 1px solid #10b981; border-radius: 4px; padding: 6px; font-size: 0.8em; font-family: monospace; }
+
+        /* Slide 7: Quiz styling */
+        .mcq { background: #333; width: 100%; text-align: left; padding: 10px 14px; border-radius: 6px; font-weight: normal; font-size: 0.92em; color: #fff; margin-bottom: 6px; border: 1px solid #444; }
+        .mcq:hover { background: #444; }
+        .mcq.correct { background: #10b981 !important; color: #0b132b; font-weight: bold; }
+        .mcq.wrong { background: #ef4444 !important; color: #fff; }
+        .quiz-container { text-align: left; background: #1a1a1a; padding: 16px 20px; border-radius: 8px; max-height: 250px; }
+    </style>
+<body>
+    <a href="index.html" style="position: absolute; top: 16px; left: 24px; color: #94a3b8; text-decoration: none; font-size: 0.85em; font-weight: bold; background: rgba(30,41,59,0.7); backdrop-filter: blur(8px); padding: 6px 14px; border-radius: 6px; border: 1px solid #334155; z-index: 999; display: flex; align-items: center; gap: 6px;">🏠 <span>Curriculum Hub</span></a>
+
+    <!-- SLIDE 1: OTA UPDATES -->
+    <div class="slide active" id="slide-1">
+        <h1>1. OTA Updates: Downloading New Skills 📲</h1>
+        <p>The <code>updaterd</code> daemon downloads new ONNX walking policies over-the-air using an <strong>A/B Atomic Partition</strong> strategy.</p>
+        <p><strong>The 12YO Concept:</strong> Like Neo learning Kung Fu in The Matrix by plugging in a data cartridge. If the skill has a bug, the duck instantly reverts to its old brain.</p>
+        <div class="interactive-zone">
+            <div class="slot-container">
+                <div class="slot-box" id="slot-a" style="border-color: #10b981;">
+                    <span style="color: #10b981; font-weight: bold;">● Slot A (Current Golden Image)</span><br>
+                    • Model: walk_v2.onnx<br>
+                    • Status: ACTIVE (Safe Fallback)
+                </div>
+                <div class="slot-box" id="slot-b" style="border-color: #64748b;">
+                    <span style="color: #64748b; font-weight: bold;">○ Slot B (Incoming Update)</span><br>
+                    • Model: sprint_v3.onnx<br>
+                    • Status: <span id="slot-b-status">IDLE (Awaiting OTA)</span>
+                </div>
+            </div>
+            <div style="margin-top: 12px; display: flex; gap: 10px;">
+                <button onclick="flashOTA()" style="padding: 6px 14px; font-size: 0.85em;">⚡ Flash OTA Update</button>
+                <button onclick="triggerRollback()" style="padding: 6px 14px; font-size: 0.85em; background: #ef4444; color: #fff;">💥 Simulate Trip & Rollback</button>
+            </div>
+            <p id="ota-msg" style="font-family: monospace; font-size: 0.8em; color: #38bdf8; margin: 8px 0 0 0;"></p>
+        </div>
+        <div class="nav-buttons">
+            <button style="visibility: hidden;">Prev</button>
+            <button onclick="nextSlide(2)">Next: CI/CD Testing ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: CONTINUOUS INTEGRATION -->
+    <div class="slide" id="slide-2">
+        <h1>2. Continuous Integration: The Digital Obstacle Course 🏃</h1>
+        <p>No model is ever deployed directly to physical hardware! Automated CI pipelines run <strong>1,000 headless MuJoCo simulations</strong> on git push.</p>
+        <p><strong>The 12YO Concept:</strong> A virtual gymnastics tryout. The new brain must run 1,000 times in the physics matrix without tripping once before it gets loaded into real motors.</p>
+        <div class="interactive-zone">
+            <div style="font-family: monospace; font-size: 0.88em;">
+                CI Test Pipeline: <span id="ci-status" style="color: #f59e0b;">AWAITING TRIGGER</span>
+            </div>
+            <div class="ci-progress-bar">
+                <div class="ci-fill" id="ci-bar">0%</div>
+            </div>
+            <button onclick="runCI()" id="ci-btn" style="margin-top: 12px; padding: 6px 16px; font-size: 0.85em;">▶️ Run Automated 1,000-Sim CI Gate</button>
+            <p id="ci-log" style="font-family: monospace; font-size: 0.78em; color: #94a3b8; margin: 6px 0 0 0;">Tests: Joint Torques, Fall Recoveries, Friction Perturbations.</p>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(1)">⬅️ Prev</button>
+            <button onclick="nextSlide(3)">Next: Edge Security ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: EDGE SECURITY & CRYPTOGRAPHY -->
+    <div class="slide" id="slide-3">
+        <h1>3. Edge Security: Locking the Digital Front Door 🔐</h1>
+        <p>Edge devices are vulnerable to rogue network attacks. Microduck verifies models using <strong>ED25519 Cryptographic Signatures</strong> and SHA-256 hashes.</p>
+        <p><strong>The 12YO Concept:</strong> A wax royal seal on an official letter. If an attacker tampers with a single number in the brain, the seal breaks and the duck rejects it.</p>
+        <div class="interactive-zone">
+            <div class="crypto-box">
+                <div style="flex: 1; background: #0f172a; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8em; text-align: left;">
+                    <b>Model:</b> <select id="model-select" onchange="resetCrypto()" style="background: #1e293b; color: #fff; border: 1px solid #444; padding: 3px;">
+                        <option value="valid">Official Signed (policy_v3.onnx)</option>
+                        <option value="tampered">Rogue Injected (hacked_brain.onnx)</option>
+                    </select><br>
+                    <b>Signature:</b> <span id="sig-display" style="color: #94a3b8;">ED25519-SHA256</span><br>
+                    <b>Validation:</b> <span id="crypto-result" style="color: #f59e0b;">READY TO VERIFY</span>
+                </div>
+            </div>
+            <button onclick="verifyModel()" style="margin-top: 12px; padding: 6px 16px; font-size: 0.85em;">🛡️ Verify Signature & Flash</button>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(2)">⬅️ Prev</button>
+            <button onclick="nextSlide(4)">Next: Telemetry Observability ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 4: TELEMETRY OBSERVABILITY -->
+    <div class="slide" id="slide-4">
+        <h1>4. Telemetry & Observability: The Robot Fitness Tracker 📊</h1>
+        <p>Live robots continuously stream IMU drift, motor thermals, and fall rates back to the cloud via lightweight encrypted MQTT/gRPC.</p>
+        <p><strong>The 12YO Concept:</strong> Like a smartwatch for your robot. If motor #4 starts running too hot, the cloud dashboard alerts the technician before the motor melts.</p>
+        <div class="interactive-zone">
+            <div class="gauge-row">
+                <div class="gauge-card" style="border-color: #10b981;">
+                    <span style="color: #94a3b8;">Fleet Fall Rate</span><br>
+                    <b style="color: #10b981; font-size: 1.3em;">0.02 / hr</b><br>
+                    <small>99.8% Stability</small>
+                </div>
+                <div class="gauge-card" style="border-color: #38bdf8;">
+                    <span style="color: #94a3b8;">Latency Jitter</span><br>
+                    <b style="color: #38bdf8; font-size: 1.3em;">±0.08 ms</b><br>
+                    <small>50.0 Hz Cadence</small>
+                </div>
+                <div class="gauge-card" style="border-color: #f59e0b;">
+                    <span style="color: #94a3b8;">Torque Temp</span><br>
+                    <b style="color: #f59e0b; font-size: 1.3em;">44.2 °C</b><br>
+                    <small>Nominal &lt; 75°C</small>
+                </div>
+            </div>
+            <p style="font-family: monospace; font-size: 0.8em; color: #94a3b8; margin-top: 10px;">Cloud Fleet Dashboard: 10/10 Microducks Healthy and Reporting Live.</p>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(3)">⬅️ Prev</button>
+            <button onclick="nextSlide(5)">Next: DevSecOps Lifecycle ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 5: DEVSECOPS LIFECYCLE -->
+    <div class="slide" id="slide-5">
+        <h1>5. The Physical AI DevSecOps Lifecycle 🔄</h1>
+        <p>Deploying AI to physical hardware follows a strict 5-stage secure release lifecycle.</p>
+        <p><strong>The 12YO Concept:</strong> Sim $\to$ Test $\to$ Seal $\to$ Beam $\to$ Walk! Zero shortcuts when moving from math to metal.</p>
+        <div class="interactive-zone">
+            <div style="display: flex; gap: 8px; width: 92%; justify-content: center; align-items: center;">
+                <div class="slot-box" style="text-align: center; border-color: #38bdf8;"><span style="color: #38bdf8; font-weight: bold;">1. Train</span><br><small>MuJoCo PPO</small></div>
+                <span style="color: #f59e0b;">➔</span>
+                <div class="slot-box" style="text-align: center; border-color: #f59e0b;"><span style="color: #f59e0b; font-weight: bold;">2. CI Gate</span><br><small>1k Headless</small></div>
+                <span style="color: #f59e0b;">➔</span>
+                <div class="slot-box" style="text-align: center; border-color: #a855f7;"><span style="color: #a855f7; font-weight: bold;">3. Sign</span><br><small>ED25519</small></div>
+                <span style="color: #f59e0b;">➔</span>
+                <div class="slot-box" style="text-align: center; border-color: #10b981;"><span style="color: #10b981; font-weight: bold;">4. OTA</span><br><small>Atomic A/B</small></div>
+                <span style="color: #f59e0b;">➔</span>
+                <div class="slot-box" style="text-align: center; border-color: #ec4899;"><span style="color: #ec4899; font-weight: bold;">5. Run</span><br><small>50Hz robotd</small></div>
+            </div>
+            <p style="font-family: monospace; color: #10b981; font-size: 0.85em; margin-top: 14px;">End-to-End DevSecOps guarantees 0% production hardware regressions.</p>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(4)">⬅️ Prev</button>
+            <button onclick="nextSlide(6)">Next: Swarm Fleet ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 6: SWARM FLEET MANAGEMENT -->
+    <div class="slide" id="slide-6">
+        <h1>6. Swarm Defense & Fleet Management 🦆🦆🦆</h1>
+        <p>Managing 100+ robots in a factory or classroom requires fleet orchestration, SSH key rotation, and zero-trust local network isolation.</p>
+        <p><strong>The 12YO Concept:</strong> A flock of birds flying in perfect sync. If one bird sees an obstacle, the whole flock adjusts together.</p>
+        <div class="interactive-zone">
+            <div class="swarm-grid">
+                <div class="swarm-duck">🦆 #01<br><span style="color: #10b981;">Online</span></div>
+                <div class="swarm-duck">🦆 #02<br><span style="color: #10b981;">Online</span></div>
+                <div class="swarm-duck">🦆 #03<br><span style="color: #10b981;">Online</span></div>
+                <div class="swarm-duck">🦆 #04<br><span style="color: #10b981;">Online</span></div>
+                <div class="swarm-duck">🦆 #05<br><span style="color: #10b981;">Online</span></div>
+                <div class="swarm-duck">🦆 #06<br><span style="color: #10b981;">Online</span></div>
+                <div class="swarm-duck">🦆 #07<br><span style="color: #10b981;">Online</span></div>
+                <div class="swarm-duck">🦆 #08<br><span style="color: #10b981;">Online</span></div>
+                <div class="swarm-duck">🦆 #09<br><span style="color: #10b981;">Online</span></div>
+                <div class="swarm-duck">🦆 #10<br><span style="color: #10b981;">Online</span></div>
+            </div>
+            <p style="font-family: monospace; font-size: 0.82em; color: #38bdf8; margin-top: 10px;">Fleet Broadcast: All 10 units synchronized to Golden Policy v3.2.</p>
+        </div>
+        <div class="nav-buttons">
+            <button onclick="nextSlide(5)">⬅️ Prev</button>
+            <button onclick="nextSlide(7)">Next: Knowledge Check 🧠 ➡️</button>
+        </div>
+    </div>
+
+    <!-- SLIDE 7: KNOWLEDGE CHECK (5 QUESTIONS - SKIPPABLE) -->
+    <div class="slide" id="slide-7">
+        <h1>7. Phase 6 Knowledge Check 🧠</h1>
+        <p>Test your understanding of DevSecOps, OTA Updates & Fleet Security! Answer the 5 questions or skip.</p>
+        
+        <div class="quiz-container" id="quiz-container">
+            <!-- Q1 -->
+            <div class="question" id="q1">
+                <h4 style="color: #10b981; margin: 0 0 6px 0;">1. What is the purpose of an A/B atomic partition update in updaterd?</h4>
+                <button class="mcq" onclick="checkAnswer(1, false, this)">A) To double the robot's walking speed.</button>
+                <button class="mcq" onclick="checkAnswer(1, true, this)">B) To safely test a new policy in Slot B with instant auto-rollback to Slot A if the robot trips.</button>
+                <button class="mcq" onclick="checkAnswer(1, false, this)">C) To install video games on the Rockchip CPU.</button>
+            </div>
+            <!-- Q2 -->
+            <div class="question" id="q2" style="display: none;">
+                <h4 style="color: #f59e0b; margin: 0 0 6px 0;">2. Why must new neural policies pass 1,000 headless MuJoCo simulations in CI?</h4>
+                <button class="mcq" onclick="checkAnswer(2, true, this)">A) To mathematically guarantee the model does not trip or spike motor torques before touching real hardware.</button>
+                <button class="mcq" onclick="checkAnswer(2, false, this)">B) Because physical robots don't have batteries.</button>
+                <button class="mcq" onclick="checkAnswer(2, false, this)">C) To make the simulation render faster in 3D.</button>
+            </div>
+            <!-- Q3 -->
+            <div class="question" id="q3" style="display: none;">
+                <h4 style="color: #38bdf8; margin: 0 0 6px 0;">3. How does cryptographic ED25519 signing protect an edge robot?</h4>
+                <button class="mcq" onclick="checkAnswer(3, false, this)">A) It prevents the robot from getting wet.</button>
+                <button class="mcq" onclick="checkAnswer(3, true, this)">B) It ensures the robot only executes verified neural weights signed by authorized DevOps engineers, blocking rogue models.</button>
+                <button class="mcq" onclick="checkAnswer(3, false, this)">C) It encrypts the camera lens.</button>
+            </div>
+            <!-- Q4 -->
+            <div class="question" id="q4" style="display: none;">
+                <h4 style="color: #a855f7; margin: 0 0 6px 0;">4. Why is real-time telemetry observability critical for a fleet of robots?</h4>
+                <button class="mcq" onclick="checkAnswer(4, true, this)">A) It tracks motor temperatures, latency jitter, and fall rates to detect mechanical wear before catastrophic failure.</button>
+                <button class="mcq" onclick="checkAnswer(4, false, this)">B) To broadcast the robot's location to social media.</button>
+                <button class="mcq" onclick="checkAnswer(4, false, this)">C) It reduces the weight of the robot.</button>
+            </div>
+            <!-- Q5 -->
+            <div class="question" id="q5" style="display: none;">
+                <h4 style="color: #ef4444; margin: 0 0 6px 0;">5. In the 5-stage DevSecOps lifecycle, what happens after automated CI testing passes?</h4>
+                <button class="mcq" onclick="checkAnswer(5, false, this)">A) The model is immediately deleted.</button>
+                <button class="mcq" onclick="checkAnswer(5, true, this)">B) The model is cryptographically signed and packaged for secure OTA deployment.</button>
+                <button class="mcq" onclick="checkAnswer(5, false, this)">C) The robot shuts down permanently.</button>
+            </div>
+            
+            <p id="quiz-feedback" style="font-weight: bold; margin-top: 10px; margin-bottom: 0; min-height: 20px; font-size: 0.9em;"></p>
+        </div>
+
+        <div class="nav-buttons">
+            <button onclick="nextSlide(6)">⬅️ Prev</button>
+            <div>
+                <button onclick="skipQuiz()" style="background: #64748b; margin-right: 8px;">Skip Quiz ⏭️</button>
+                <button id="finish-btn" style="display: none;" onclick="alert('🎉 MASTERCLASS COMPLETE! You have graduated from all 6 Phases of Physical AI Robotics!')">Graduate Masterclass 🎓</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Navigation ---
+        function nextSlide(slideNum) {
+            document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+            document.getElementById('slide-' + slideNum).classList.add('active');
+        }
+
+        // --- Slide 1: OTA Simulation ---
+        function flashOTA() {
+            document.getElementById('slot-b-status').innerText = 'FLASHED & TESTING (10s watchdog)';
+            document.getElementById('slot-b').style.borderColor = '#f59e0b';
+            document.getElementById('ota-msg').innerText = '⚡ Slot B staged! Monitoring 50Hz balance for 10 seconds...';
+        }
+        function triggerRollback() {
+            document.getElementById('slot-b-status').innerText = 'ROLLBACK TRIGGERED (Tripped)';
+            document.getElementById('slot-b').style.borderColor = '#ef4444';
+            document.getElementById('slot-a').style.borderColor = '#10b981';
+            document.getElementById('ota-msg').innerText = '🔄 Auto-Rollback: Instantly restored Slot A (walk_v2.onnx). Robot safe!';
+        }
+
+        // --- Slide 2: CI Progress ---
+        function runCI() {
+            const bar = document.getElementById('ci-bar');
+            const status = document.getElementById('ci-status');
+            const btn = document.getElementById('ci-btn');
+            btn.disabled = true;
+            status.innerText = 'RUNNING 1,000 HEADLESS SIMULATIONS...';
+            status.style.color = '#38bdf8';
+            let pct = 0;
+            const iv = setInterval(() => {
+                pct += 10;
+                bar.style.width = pct + '%';
+                bar.innerText = pct + '% (' + (pct * 10) + ' sims)';
+                if (pct >= 100) {
+                    clearInterval(iv);
+                    status.innerText = '✅ CI GATE PASSED: 1,000/1,000 Runs Succeeded (0 Falls)';
+                    status.style.color = '#10b981';
+                    btn.disabled = false;
+                    btn.innerText = '✅ Passed (Ready to Sign)';
+                }
+            }, 100);
+        }
+
+        // --- Slide 3: Crypto Verification ---
+        function resetCrypto() {
+            document.getElementById('crypto-result').innerText = 'READY TO VERIFY';
+            document.getElementById('crypto-result').style.color = '#f59e0b';
+        }
+        function verifyModel() {
+            const sel = document.getElementById('model-select').value;
+            const res = document.getElementById('crypto-result');
+            if (sel === 'valid') {
+                res.innerText = '✅ SIGNATURE VALID (ED25519): Authorized by DevOps. Flashed to /etc/microduck!';
+                res.style.color = '#10b981';
+            } else {
+                res.innerText = '🛑 BLOCKED: Checksum mismatch! Rogue model rejected by Root of Trust.';
+                res.style.color = '#ef4444';
+            }
+        }
+
+        // --- Slide 7: Quiz Logic (5 Questions) ---
+        function checkAnswer(qNum, isCorrect, btn) {
+            const feedback = document.getElementById('quiz-feedback');
+            const buttons = document.getElementById('q' + qNum).getElementsByTagName('button');
+            for(let b of buttons) { b.className = 'mcq'; }
+            
+            if (isCorrect) {
+                btn.classList.add('correct');
+                feedback.style.color = '#10b981';
+                feedback.innerText = "✅ Correct! Moving to next question...";
+                
+                setTimeout(() => {
+                    document.getElementById('q' + qNum).style.display = 'none';
+                    if (qNum < 5) {
+                        document.getElementById('q' + (qNum + 1)).style.display = 'block';
+                        feedback.innerText = "";
+                    } else {
+                        feedback.innerText = "🎉 100% Score! You have mastered DevSecOps for Physical AI Swarms.";
+                        document.getElementById('finish-btn').style.display = 'inline-block';
+                    }
+                }, 1000);
+            } else {
+                btn.classList.add('wrong');
+                feedback.style.color = '#ef4444';
+                feedback.innerText = "❌ Incorrect. Review the DevSecOps principles and try again!";
+            }
+        }
+
+        function skipQuiz() {
+            for (let i = 1; i <= 5; i++) {
+                document.getElementById('q' + i).style.display = 'none';
+            }
+            document.getElementById('quiz-feedback').style.color = '#10b981';
+            document.getElementById('quiz-feedback').innerText = "⏭️ Quiz Skipped! Answers: 1-B, 2-A, 3-B, 4-A, 5-B";
+            document.getElementById('finish-btn').style.display = 'inline-block';
+        }
+    </script>
+</body>
+</html>
