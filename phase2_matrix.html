@@ -344,6 +344,7 @@
                     } else {
                         feedback.innerText = "🎉 100% Score! You mastered the Physics Matrix.";
                         document.getElementById('finish-btn').style.display = 'inline-block';
+                        unlockNextPhase(3);
                     }
                 }, 1000);
             } else {
@@ -355,12 +356,37 @@
 
         function skipQuiz() {
             for (let i = 1; i <= 5; i++) {
-                document.getElementById('q' + i).style.display = 'none';
+                const el = document.getElementById('q' + i);
+                if (el) el.style.display = 'none';
             }
             document.getElementById('quiz-feedback').style.color = '#38bdf8';
             document.getElementById('quiz-feedback').innerText = "⏭️ Quiz Skipped! Answers: 1-B, 2-A, 3-B, 4-A, 5-B";
             document.getElementById('finish-btn').style.display = 'inline-block';
+            unlockNextPhase(3);
+        }
+
+        function unlockNextPhase(nextPhaseNum) {
+            const current = parseInt(localStorage.getItem('max_unlocked_phase') || '1');
+            localStorage.setItem('max_unlocked_phase', Math.max(current, nextPhaseNum));
+            setTimeout(() => {
+                document.getElementById('badge-modal').style.display = 'flex';
+            }, 600);
         }
     </script>
+
+    <!-- Achievement Badge Modal -->
+    <div id="badge-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: #151d30; border: 2px solid #059669; border-radius: 16px; padding: 35px 40px; text-align: center; max-width: 440px; box-shadow: 0 0 30px rgba(5, 150, 105, 0.4);">
+            <div style="font-size: 4em; margin-bottom: 8px;">🧠</div>
+            <h2 style="color: #10b981; font-size: 1.6em; margin-bottom: 8px;">Matrix Architect Badge!</h2>
+            <p style="color: #cbd5e1; font-size: 0.95em; margin-bottom: 18px;">You mastered MuJoCo kinematic trees, MJCF XML, soft collision contacts, and forward dynamics.</p>
+            <div style="background: #0f172a; padding: 10px; border-radius: 8px; font-family: monospace; font-size: 0.85em; color: #f59e0b; margin-bottom: 22px;">
+                🔓 Phase 3 (The Dog Trainer) is now unlocked!
+            </div>
+            <button onclick="window.location.href='index.html'" style="background: linear-gradient(135deg, #059669, #047857); color: #fff; font-size: 1.05em; font-weight: bold; padding: 12px 26px; border-radius: 8px; border: none; cursor: pointer;">
+                🚀 Return to Mission Control
+            </button>
+        </div>
+    </div>
 </body>
 </html>

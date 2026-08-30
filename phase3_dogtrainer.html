@@ -328,6 +328,7 @@
                     } else {
                         feedback.innerText = "🎉 100% Score! You mastered RL & PPO Training.";
                         document.getElementById('finish-btn').style.display = 'inline-block';
+                        unlockNextPhase(4);
                     }
                 }, 1000);
             } else {
@@ -339,12 +340,37 @@
 
         function skipQuiz() {
             for (let i = 1; i <= 5; i++) {
-                document.getElementById('q' + i).style.display = 'none';
+                const el = document.getElementById('q' + i);
+                if (el) el.style.display = 'none';
             }
             document.getElementById('quiz-feedback').style.color = '#f59e0b';
             document.getElementById('quiz-feedback').innerText = "⏭️ Quiz Skipped! Answers: 1-B, 2-A, 3-B, 4-A, 5-B";
             document.getElementById('finish-btn').style.display = 'inline-block';
+            unlockNextPhase(4);
+        }
+
+        function unlockNextPhase(nextPhaseNum) {
+            const current = parseInt(localStorage.getItem('max_unlocked_phase') || '1');
+            localStorage.setItem('max_unlocked_phase', Math.max(current, nextPhaseNum));
+            setTimeout(() => {
+                document.getElementById('badge-modal').style.display = 'flex';
+            }, 600);
         }
     </script>
+
+    <!-- Achievement Badge Modal -->
+    <div id="badge-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: #151d30; border: 2px solid #f59e0b; border-radius: 16px; padding: 35px 40px; text-align: center; max-width: 440px; box-shadow: 0 0 30px rgba(245, 158, 11, 0.4);">
+            <div style="font-size: 4em; margin-bottom: 8px;">🦴</div>
+            <h2 style="color: #f59e0b; font-size: 1.6em; margin-bottom: 8px;">Duck Whisperer Badge!</h2>
+            <p style="color: #cbd5e1; font-size: 0.95em; margin-bottom: 18px;">You mastered Gymnasium environments, reward shaping, PPO Actor-Critic, and curriculum learning.</p>
+            <div style="background: #0f172a; padding: 10px; border-radius: 8px; font-family: monospace; font-size: 0.85em; color: #a855f7; margin-bottom: 22px;">
+                🔓 Phase 4 (Brain Surgery & Edge Inference) is now unlocked!
+            </div>
+            <button onclick="window.location.href='index.html'" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #0b132b; font-size: 1.05em; font-weight: bold; padding: 12px 26px; border-radius: 8px; border: none; cursor: pointer;">
+                🚀 Return to Mission Control
+            </button>
+        </div>
+    </div>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🦆 Microduck Physical AI Masterclass — Complete Curriculum Portal</title>
+    <title>🦆 Microduck Physical AI Masterclass — Mission Control</title>
     <meta name="description" content="A 6-Phase interactive Physical AI robotics curriculum bridging headless MuJoCo physics, PyTorch PPO reinforcement learning, and bare-metal Rust daemons on the Rockchip RK3566.">
     <style>
         :root {
@@ -27,46 +27,62 @@
         /* Navigation Header */
         header { position: sticky; top: 0; z-index: 100; background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-color); padding: 14px 28px; display: flex; justify-content: space-between; align-items: center; }
         .logo { font-size: 1.25em; font-weight: 800; color: var(--text-main); text-decoration: none; display: flex; align-items: center; gap: 8px; }
-        .nav-links { display: flex; gap: 20px; align-items: center; }
-        .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 0.92em; font-weight: 600; transition: color 0.2s; }
+        .nav-links { display: flex; gap: 16px; align-items: center; }
+        .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 0.9em; font-weight: 600; transition: color 0.2s; }
         .nav-links a:hover { color: var(--accent-cyan); }
-        .btn-nav { background: #1e293b; color: var(--accent-cyan); border: 1px solid var(--accent-cyan); padding: 6px 14px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 0.85em; transition: all 0.2s; }
+        .btn-nav { background: #1e293b; color: var(--accent-cyan); border: 1px solid var(--accent-cyan); padding: 6px 14px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 0.85em; transition: all 0.2s; cursor: pointer; }
         .btn-nav:hover { background: var(--accent-cyan); color: #0b0f19; }
 
         /* Container */
         .container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
 
         /* Hero Section */
-        .hero { text-align: center; padding: 40px 0 60px 0; }
+        .hero { text-align: center; padding: 30px 0 40px 0; }
         .badge-hero { display: inline-block; background: rgba(56, 189, 248, 0.12); color: var(--accent-cyan); border: 1px solid rgba(56, 189, 248, 0.3); padding: 6px 16px; border-radius: 20px; font-size: 0.85em; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 18px; }
-        h1 { font-size: 3em; font-weight: 900; line-height: 1.15; margin-bottom: 16px; background: linear-gradient(135deg, #ffffff 40%, #94a3b8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .hero p { font-size: 1.25em; color: var(--text-muted); max-width: 820px; margin: 0 auto 30px auto; }
+        h1 { font-size: 2.9em; font-weight: 900; line-height: 1.15; margin-bottom: 16px; background: linear-gradient(135deg, #ffffff 40%, #94a3b8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero p { font-size: 1.2em; color: var(--text-muted); max-width: 820px; margin: 0 auto 26px auto; }
         
         .hero-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-        .btn-primary { background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; padding: 12px 26px; border-radius: 8px; font-weight: 700; text-decoration: none; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4); }
+        .btn-primary { background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; padding: 12px 24px; border-radius: 8px; font-weight: 700; text-decoration: none; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4); }
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(2, 132, 199, 0.6); }
         
-        .btn-secondary { background: #1e293b; color: #fff; border: 1px solid var(--border-color); padding: 12px 24px; border-radius: 8px; font-weight: 700; text-decoration: none; transition: background 0.2s, border-color 0.2s; }
+        .btn-secondary { background: #1e293b; color: #fff; border: 1px solid var(--border-color); padding: 12px 22px; border-radius: 8px; font-weight: 700; text-decoration: none; transition: background 0.2s, border-color 0.2s; }
         .btn-secondary:hover { background: #2d3b55; border-color: #475569; }
 
-        .btn-zip { background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; padding: 12px 24px; border-radius: 8px; font-weight: 700; text-decoration: none; transition: transform 0.15s; }
+        .btn-zip { background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; padding: 12px 22px; border-radius: 8px; font-weight: 700; text-decoration: none; transition: transform 0.15s; }
         .btn-zip:hover { transform: translateY(-2px); }
 
+        /* Badge Showcase Rack */
+        .badge-rack-container { background: #0f172a; border: 1px solid var(--border-color); border-radius: 12px; padding: 18px 24px; margin: 25px 0 40px 0; }
+        .badge-rack-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .badge-rack-title { font-size: 0.95em; font-weight: 800; color: var(--accent-amber); display: flex; align-items: center; gap: 8px; }
+        .badge-rack-score { font-size: 0.85em; font-family: monospace; color: var(--text-muted); }
+        .badge-rack { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+        .badge-slot { background: var(--bg-card); border: 1px dashed #334155; border-radius: 8px; padding: 10px 6px; text-align: center; font-size: 0.75em; font-weight: bold; color: #64748b; transition: all 0.3s; }
+        .badge-slot.earned { background: #1a253c; border: 1px solid var(--accent-amber); color: var(--text-main); box-shadow: 0 0 12px rgba(245, 158, 11, 0.2); }
+        .badge-icon { font-size: 1.8em; margin-bottom: 4px; display: block; filter: grayscale(1) opacity(0.3); }
+        .badge-slot.earned .badge-icon { filter: none; opacity: 1; transform: scale(1.1); transition: transform 0.2s; }
+
         /* Stats Bar */
-        .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 40px 0 60px 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; }
+        .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 50px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; }
         .stat-item { text-align: center; }
-        .stat-val { font-size: 1.8em; font-weight: 800; color: var(--accent-cyan); }
-        .stat-lbl { font-size: 0.82em; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+        .stat-val { font-size: 1.7em; font-weight: 800; color: var(--accent-cyan); }
+        .stat-lbl { font-size: 0.8em; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
 
         /* Section Titles */
-        .section-header { margin-bottom: 30px; }
-        .section-header h2 { font-size: 2em; font-weight: 800; }
-        .section-header p { color: var(--text-muted); font-size: 1.05em; }
+        .section-header { margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .section-header h2 { font-size: 1.8em; font-weight: 800; }
+        .section-header p { color: var(--text-muted); font-size: 0.95em; }
+
+        /* Teacher Mode Tools */
+        .teacher-tools { display: flex; gap: 8px; }
+        .btn-teacher { background: #1e293b; color: #94a3b8; border: 1px solid #475569; padding: 4px 10px; border-radius: 4px; font-size: 0.75em; font-weight: bold; cursor: pointer; }
+        .btn-teacher:hover { color: #fff; border-color: var(--accent-cyan); }
 
         /* Curriculum Cards Grid */
         .curriculum-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px; margin-bottom: 70px; }
         .phase-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.2s, border-color 0.2s, background 0.2s; position: relative; overflow: hidden; }
-        .phase-card:hover { transform: translateY(-4px); background: var(--bg-card-hover); border-color: #3b82f6; }
+        .phase-card:hover:not(.locked) { transform: translateY(-4px); background: var(--bg-card-hover); border-color: #3b82f6; }
         .phase-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
         
         .p1-bar::before { background: #38bdf8; }
@@ -75,6 +91,26 @@
         .p4-bar::before { background: #a855f7; }
         .p5-bar::before { background: #d97706; }
         .p6-bar::before { background: #10b981; }
+
+        /* LOCKED STATE STYLING */
+        .phase-card.locked { opacity: 0.45; filter: grayscale(0.8); background: #0d1320; border-color: #1e293b; }
+        .phase-card.locked::after {
+            content: '🔒 LOCKED — Complete previous phase quiz to unlock';
+            position: absolute;
+            bottom: 22px;
+            left: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            color: #f59e0b;
+            font-size: 0.82em;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            pointer-events: none;
+            z-index: 10;
+        }
 
         .phase-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .phase-num { font-size: 0.8em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 4px; background: #0f172a; }
@@ -94,6 +130,8 @@
         .btn-card-pdf { background: #1e293b; color: #cbd5e1; border: 1px solid var(--border-color); text-align: center; padding: 10px; border-radius: 6px; font-weight: 600; font-size: 0.85em; text-decoration: none; transition: all 0.15s; }
         .btn-card-pdf:hover { background: #334155; color: #fff; }
 
+        .phase-card.locked .card-actions a { pointer-events: none; opacity: 0; }
+
         /* Diagram Gallery Grid */
         .gallery-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 70px; }
         .gallery-item { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; text-align: center; padding: 12px; transition: transform 0.2s; }
@@ -110,10 +148,14 @@
         footer { border-top: 1px solid var(--border-color); padding: 40px 24px; text-align: center; color: var(--text-muted); font-size: 0.88em; }
         footer a { color: var(--accent-cyan); text-decoration: none; }
 
+        @media(max-width: 900px) {
+            .badge-rack { grid-template-columns: repeat(3, 1fr); }
+        }
         @media(max-width: 768px) {
             h1 { font-size: 2.2em; }
             .stats-bar { grid-template-columns: repeat(2, 1fr); }
             .card-actions { grid-template-columns: 1fr; }
+            .badge-rack { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
 </head>
@@ -122,7 +164,7 @@
     <!-- Header Navigation -->
     <header>
         <a href="index.html" class="logo">
-            <span>🦆</span> Microduck Physical AI
+            <span>🦆</span> Microduck Mission Control
         </a>
         <nav class="nav-links">
             <a href="#curriculum">Syllabus</a>
@@ -137,13 +179,51 @@
         
         <!-- Hero Section -->
         <section class="hero">
-            <div class="badge-hero">🚀 Semester Robotics Curriculum • 12YO to University</div>
+            <div class="badge-hero">🚀 Physical AI Masterclass • Mission Control</div>
             <h1>Microduck Physical AI Masterclass</h1>
             <p>From Math to Metal — A 6-Phase interactive robotics curriculum bridging headless MuJoCo simulation, PyTorch PPO reinforcement learning, and bare-metal Rust daemons on the Rockchip RK3566.</p>
             <div class="hero-actions">
-                <a href="phase1_anatomy.html" class="btn-primary">▶️ Launch Phase 1 Interactive Deck</a>
+                <a href="phase1_anatomy.html" id="btn-start-course" class="btn-primary">▶️ Start Phase 1 (Anatomy)</a>
                 <a href="Microduck_Physical_AI_Masterclass_Complete_Book.pdf" target="_blank" class="btn-secondary">📘 Complete Master Manual (PDF)</a>
                 <a href="microduck_all_handouts.zip" class="btn-zip">📦 Download All Handouts (.ZIP)</a>
+            </div>
+        </section>
+
+        <!-- Achievement Badges Rack -->
+        <section class="badge-rack-container">
+            <div class="badge-rack-header">
+                <div class="badge-rack-title">
+                    <span>🏆</span> Student Achievement Badges
+                </div>
+                <div class="badge-rack-score" id="badge-progress-text">
+                    Progress: 1 / 6 Modules Unlocked
+                </div>
+            </div>
+            <div class="badge-rack">
+                <div class="badge-slot earned" id="badge-1">
+                    <span class="badge-icon">🏆</span>
+                    Hardware Hacker<br><small style="color: #38bdf8;">Phase 1</small>
+                </div>
+                <div class="badge-slot" id="badge-2">
+                    <span class="badge-icon">🧠</span>
+                    Matrix Architect<br><small style="color: #059669;">Phase 2</small>
+                </div>
+                <div class="badge-slot" id="badge-3">
+                    <span class="badge-icon">🦴</span>
+                    Duck Whisperer<br><small style="color: #f59e0b;">Phase 3</small>
+                </div>
+                <div class="badge-slot" id="badge-4">
+                    <span class="badge-icon">🩺</span>
+                    Silicon Surgeon<br><small style="color: #a855f7;">Phase 4</small>
+                </div>
+                <div class="badge-slot" id="badge-5">
+                    <span class="badge-icon">🦀</span>
+                    Rust Commander<br><small style="color: #d97706;">Phase 5</small>
+                </div>
+                <div class="badge-slot" id="badge-6">
+                    <span class="badge-icon">🛡️</span>
+                    Swarm Guardian<br><small style="color: #10b981;">Phase 6</small>
+                </div>
             </div>
         </section>
 
@@ -167,17 +247,23 @@
             </div>
         </section>
 
-        <!-- Curriculum Grid -->
+        <!-- Curriculum Grid (Mission Control with Progression Locking) -->
         <section id="curriculum">
             <div class="section-header">
-                <h2>📚 The 6-Phase Curriculum</h2>
-                <p>Click "Open Slide Deck" to launch the interactive HTML module with dynamic physics simulations, or "Download Handout" for printable ReportLab PDFs.</p>
+                <div>
+                    <h2>📚 Mission Control Curriculum</h2>
+                    <p>Complete each module's Knowledge Check quiz to earn your badge and unlock the next phase.</p>
+                </div>
+                <div class="teacher-tools">
+                    <button class="btn-teacher" onclick="resetProgress()">🔄 Reset Progress</button>
+                    <button class="btn-teacher" onclick="unlockAllPhases()">🔓 Unlock All (Teacher Mode)</button>
+                </div>
             </div>
 
             <div class="curriculum-grid">
 
                 <!-- Phase 1 Card -->
-                <div class="phase-card p1-bar">
+                <div class="phase-card p1-bar" id="card-phase-1" data-phase="1">
                     <div>
                         <div class="phase-meta">
                             <span class="phase-num" style="color: #38bdf8;">PHASE 1</span>
@@ -200,7 +286,7 @@
                 </div>
 
                 <!-- Phase 2 Card -->
-                <div class="phase-card p2-bar">
+                <div class="phase-card p2-bar" id="card-phase-2" data-phase="2">
                     <div>
                         <div class="phase-meta">
                             <span class="phase-num" style="color: #059669;">PHASE 2</span>
@@ -223,7 +309,7 @@
                 </div>
 
                 <!-- Phase 3 Card -->
-                <div class="phase-card p3-bar">
+                <div class="phase-card p3-bar" id="card-phase-3" data-phase="3">
                     <div>
                         <div class="phase-meta">
                             <span class="phase-num" style="color: #f59e0b;">PHASE 3</span>
@@ -246,7 +332,7 @@
                 </div>
 
                 <!-- Phase 4 Card -->
-                <div class="phase-card p4-bar">
+                <div class="phase-card p4-bar" id="card-phase-4" data-phase="4">
                     <div>
                         <div class="phase-meta">
                             <span class="phase-num" style="color: #a855f7;">PHASE 4</span>
@@ -269,7 +355,7 @@
                 </div>
 
                 <!-- Phase 5 Card -->
-                <div class="phase-card p5-bar">
+                <div class="phase-card p5-bar" id="card-phase-5" data-phase="5">
                     <div>
                         <div class="phase-meta">
                             <span class="phase-num" style="color: #d97706;">PHASE 5</span>
@@ -292,20 +378,20 @@
                 </div>
 
                 <!-- Phase 6 Card -->
-                <div class="phase-card p6-bar">
+                <div class="phase-card p6-bar" id="card-phase-6" data-phase="6">
                     <div>
                         <div class="phase-meta">
                             <span class="phase-num" style="color: #10b981;">PHASE 6</span>
-                            <span class="phase-tag">DEVSECOPS & FLEET SECURITY</span>
+                            <span class="phase-tag">DEVSECOPS & PHYSICAL SAFETY</span>
                         </div>
                         <h3 class="phase-title">Securing the Swarm</h3>
                         <div class="phase-analogy">🛡️ "Matrix Skills & Royal Wax Seals"</div>
-                        <p class="phase-desc">Enterprise DevSecOps for Physical AI: A/B atomic OTA updates with <code>updaterd</code>, 1,000-seed headless MuJoCo CI gates, ED25519 cryptography, and fleet telemetry observability.</p>
+                        <p class="phase-desc">Enterprise DevSecOps & Hardware Safety: Test stand mounting protocols, A/B atomic OTA updates with <code>updaterd</code>, headless MuJoCo CI gates, and ED25519 anti-tamper cryptography.</p>
                         <ul class="phase-topics">
+                            <li><span>•</span> Physical Safety: Mandatory Test Stand Mount</li>
+                            <li><span>•</span> The Hacked Duck Scenario & Anti-Tamper</li>
                             <li><span>•</span> A/B Atomic Update & Instant Auto-Rollback</li>
                             <li><span>•</span> Automated 1,000-Seed MuJoCo CI Gate</li>
-                            <li><span>•</span> Cryptographic Anti-Tamper Verification</li>
-                            <li><span>•</span> Swarm Fleet Observability Dashboard</li>
                         </ul>
                     </div>
                     <div class="card-actions">
@@ -320,8 +406,10 @@
         <!-- PDF Handouts Download Table -->
         <section id="handouts" style="margin-bottom: 70px;">
             <div class="section-header">
-                <h2>📑 Direct PDF Handout Downloads</h2>
-                <p>High-resolution printable companion guides formatted using ReportLab's 2-column Diagram Method.</p>
+                <div>
+                    <h2>📑 Direct PDF Handout Downloads</h2>
+                    <p>High-resolution printable companion guides formatted using ReportLab's 2-column Diagram Method.</p>
+                </div>
             </div>
             
             <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; overflow-x: auto;">
@@ -367,7 +455,7 @@
                         </tr>
                         <tr style="border-bottom: 1px solid var(--border-color);">
                             <td style="padding: 14px 20px; font-weight: bold; color: #10b981;">Phase 6: Securing the Swarm</td>
-                            <td style="padding: 14px 20px; color: var(--text-muted);">updaterd A/B OTA, MuJoCo CI Gates, ED25519 Crypto, Observability</td>
+                            <td style="padding: 14px 20px; color: var(--text-muted);">Physical Safety, Test Stand, A/B OTA, Anti-Tamper, Observability</td>
                             <td style="padding: 14px 20px;">3 Pages</td>
                             <td style="padding: 14px 20px;"><a href="Phase6_SecuringSwarm_Handout.pdf" target="_blank" class="btn-nav">Download PDF</a></td>
                         </tr>
@@ -385,8 +473,10 @@
         <!-- Schematics Showcase -->
         <section id="schematics" style="margin-bottom: 70px;">
             <div class="section-header">
-                <h2>🎨 Technical Diagram Highlights</h2>
-                <p>26 anti-aliased engineering diagrams generated with Pillow and embedded directly into the curriculum.</p>
+                <div>
+                    <h2>🎨 Technical Diagram Highlights</h2>
+                    <p>26 anti-aliased engineering diagrams generated with Pillow and embedded directly into the curriculum.</p>
+                </div>
             </div>
             
             <div class="gallery-grid">
@@ -443,6 +533,86 @@ uv run python -m http.server 8000
         <p style="margin-top: 6px;">Based on the open-source <a href="https://github.com/pollen-robotics/microduck" target="_blank">Pollen Robotics Microduck</a> hardware and software architecture.</p>
         <p style="margin-top: 6px; font-size: 0.8em; color: #64748b;">Powered by MuJoCo, PyTorch, Stable Baselines3, ONNX Runtime, and ReportLab.</p>
     </footer>
+
+    <!-- Mission Control Progression Logic Script -->
+    <script>
+        function initDashboard() {
+            let maxPhase = parseInt(localStorage.getItem('max_unlocked_phase'));
+            if (!maxPhase || isNaN(maxPhase)) {
+                maxPhase = 1;
+                localStorage.setItem('max_unlocked_phase', '1');
+            }
+
+            // Update Phase Cards locking status
+            for (let i = 1; i <= 6; i++) {
+                const card = document.getElementById('card-phase-' + i);
+                const badge = document.getElementById('badge-' + i);
+                
+                if (card) {
+                    if (i > maxPhase) {
+                        card.classList.add('locked');
+                        const htmlBtn = card.querySelector('.btn-card-html');
+                        if (htmlBtn) {
+                            htmlBtn.removeAttribute('href');
+                            htmlBtn.innerText = '🔒 Locked';
+                        }
+                    } else {
+                        card.classList.remove('locked');
+                        const htmlBtn = card.querySelector('.btn-card-html');
+                        if (htmlBtn) {
+                            const slidePages = [
+                                '', 'phase1_anatomy.html', 'phase2_matrix.html', 'phase3_dogtrainer.html',
+                                'phase4_brainsurgery.html', 'phase5_nervoussystem.html', 'phase6_securingswarm.html'
+                            ];
+                            htmlBtn.setAttribute('href', slidePages[i]);
+                            htmlBtn.innerText = '🚀 Open Slide Deck';
+                        }
+                    }
+                }
+
+                // Update Earned Badges
+                if (badge) {
+                    if (i <= maxPhase) {
+                        badge.classList.add('earned');
+                    } else {
+                        badge.classList.remove('earned');
+                    }
+                }
+            }
+
+            // Update Progress Text
+            const progText = document.getElementById('badge-progress-text');
+            if (progText) {
+                progText.innerText = `Progress: ${maxPhase} / 6 Modules Unlocked`;
+            }
+
+            // Update Start Button href
+            const startBtn = document.getElementById('btn-start-course');
+            if (startBtn) {
+                const slidePages = [
+                    '', 'phase1_anatomy.html', 'phase2_matrix.html', 'phase3_dogtrainer.html',
+                    'phase4_brainsurgery.html', 'phase5_nervoussystem.html', 'phase6_securingswarm.html'
+                ];
+                startBtn.setAttribute('href', slidePages[Math.min(maxPhase, 6)]);
+                startBtn.innerText = maxPhase === 1 ? '▶️ Start Phase 1 (Anatomy)' : `▶️ Continue to Phase ${Math.min(maxPhase, 6)}`;
+            }
+        }
+
+        function resetProgress() {
+            if (confirm('Reset your course progression back to Phase 1?')) {
+                localStorage.setItem('max_unlocked_phase', '1');
+                initDashboard();
+            }
+        }
+
+        function unlockAllPhases() {
+            localStorage.setItem('max_unlocked_phase', '6');
+            initDashboard();
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
 
 </body>
 </html>
