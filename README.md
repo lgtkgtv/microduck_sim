@@ -106,37 +106,71 @@ A complete semester-long curriculum taking students from hardware kinematics to 
 
 ---
 
-## 🛠️ Verification & Execution Pipeline
+## 🧭 Recommended Work Sequences & Guidance
 
-```bash
-# 1. Run full test suite with Pytest
-uv run pytest
+Depending on your objective, follow one of the two standard workflows:
 
-# 2. Verify all 6 curriculum phases mathematically & empirically
-uv run verify_curriculum.py
+### 🎓 Track A: The Physical AI Learning Journey (Theory ➔ Practice)
 
-# 3. Verify 100% of website plumbing & links
-uv run verify_web_plumbing.py
-```
+If you are learning or teaching the Physical AI stack from first principles, follow this chronological 6-phase path:
 
 ```text
-[ Step 1: Verification ] uv run pytest / verify_curriculum.py # Empirically prove all 6 curriculum phases
-          │
-          ▼
-[ Step 2: Web Plumbing ] uv run verify_web_plumbing.py        # Ensure 0 broken links on GitHub Pages
-          │
-          ▼
-[ Step 3: Simulation ]   uv run duck_drop.py                 # Verify MuJoCo physics & contact dynamics
-          │
-          ▼
-[ Step 4: RL Training ]  uv run train_microduck.py           # Train PPO locomotion policy in Gymnasium
-          │
-          ▼
-[ Step 5: Silicon Clamp] uv run export_to_onnx.py            # Extract Actor & bake [-1.0, 1.0] torque clamps
-          │
-          ▼
-[ Step 6: Edge Control ] uv run main.py                      # Run 50Hz dual-loop async controller
+Phase 1: Anatomy ──▶ Phase 2: Physics ──▶ Phase 3: RL Training ──▶ Phase 4: Brain Surgery ──▶ Phase 5: Async Edge ──▶ Phase 6: Swarm Security
 ```
+
+| Step | Focus Area | What to Read / Run | Key Concepts Mastered |
+| :---: | :--- | :--- | :--- |
+| **1** | **Hardware & Kinematics** | • Launch [Phase 1 Deck](https://lgtkgtv.github.io/microduck_sim/curriculum/phase1_anatomy.html)<br>• Review [`docs/Phase1_Anatomy_Handout.pdf`](docs/Phase1_Anatomy_Handout.pdf) | 15-DOF kinematic tree, STS3215 bus servos, Rockchip RK3566 SBC, and the 50Hz (20ms) timing budget. |
+| **2** | **MuJoCo Simulation** | • Launch [Phase 2 Deck](https://lgtkgtv.github.io/microduck_sim/curriculum/phase2_matrix.html)<br>• Run `uv run duck_drop.py`<br>• Run `./launch.sh` (Interactive 3D Viewer) | `MjModel` (blueprint) vs `MjData` (state), forward dynamics `mj_step()`, collision solver, and gravity drops. |
+| **3** | **Reinforcement Learning** | • Launch [Phase 3 Deck](https://lgtkgtv.github.io/microduck_sim/curriculum/phase3_dogtrainer.html)<br>• Run `uv run train_microduck.py` | Gymnasium environments, 60-float observation vectors, 15-dim motor actions, and PPO reward shaping. |
+| **4** | **Edge Policy Extraction** | • Launch [Phase 4 Deck](https://lgtkgtv.github.io/microduck_sim/curriculum/phase4_brainsurgery.html)<br>• Run `uv run export_to_onnx.py` | Discarding Critic network, baking `[-1.0, 1.0]` torque clamps into ONNX silicon math, and temporal sliding windows. |
+| **5** | **Decoupled Architecture** | • Launch [Phase 5 Deck](https://lgtkgtv.github.io/microduck_sim/curriculum/phase5_nervoussystem.html)<br>• Run `uv run main.py` | 50Hz Spinal Cord thread vs 10Hz Visual Cortex thread; zero GC pauses and deterministic execution. |
+| **6** | **DevSecOps & Testing** | • Launch [Phase 6 Deck](https://lgtkgtv.github.io/microduck_sim/curriculum/phase6_securingswarm.html)<br>• Run `uv run pytest` | A/B atomic OTA updates, SHA-256 cryptographic weight signatures, and 1,000-seed headless MuJoCo CI gates. |
+
+---
+
+### ⚙️ Track B: The Robotics Engineering Pipeline (Iterate ➔ Deploy)
+
+If you are developing new gaits, tuning reward functions, or testing edge inference, follow this 6-step engineering cycle:
+
+```text
+[1. Verify Baseline] ──▶ [2. Interactive Sim] ──▶ [3. Train Policy] ──▶ [4. Export & Clamp] ──▶ [5. Edge Inference] ──▶ [6. CI Test]
+```
+
+```bash
+# Step 1: Prove physical & mathematical integrity
+uv run pytest
+uv run verify_curriculum.py
+
+# Step 2: Test & perturb the 3D physics model in the native viewer
+./launch.sh
+# (Use Ctrl+Left Click to pull/push the duck in 3D, press J for joints, C for contact forces)
+
+# Step 3: Train a new locomotion policy with custom rewards
+uv run train_microduck.py
+# (Outputs trained checkpoint to policies/checkpoints/microduck_ppo_policy.zip)
+
+# Step 4: Perform Brain Surgery & bake silicon safety clamps
+uv run export_to_onnx.py
+# (Outputs frozen bounded model to policies/checkpoints/microduck_walking_policy.onnx)
+
+# Step 5: Test the 50Hz asynchronous edge control loop
+uv run main.py
+
+# Step 6: Regenerate complete PDF handouts and manual if curriculum updated
+uv run python generators/build_all_assets.py
+```
+
+---
+
+### 📓 Interactive Jupyter Sandbox
+
+For an all-in-one interactive notebook that steps through every concept with executable code cells and inline diagrams, launch:
+
+```bash
+uv run jupyter lab notebooks/microduck_masterclass.ipynb
+```
+
 
 ---
 
