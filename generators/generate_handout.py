@@ -608,13 +608,6 @@ def create_handout(output_path=PDF_OUTPUT):
     doc.build(story, canvasmaker=NumberedCanvas)
     print(f"✅ Handout PDF successfully created: {output_path}")
 
-    # Also create alias for convenience
-    if output_path != PDF_ALIAS:
-        import shutil
-        shutil.copyfile(output_path, PDF_ALIAS)
-        print(f"✅ Created alias copy: {PDF_ALIAS}")
-
-
 def main():
     print("=" * 60)
     print("📄 Building Microduck Physical AI Handout (Diagram Method)...")

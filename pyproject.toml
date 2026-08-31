@@ -19,4 +19,6 @@ dependencies = [
     "reportlab>=5.0.1",
     "stable-baselines3>=2.9.0",
     "torch>=2.13.0",
+    "pytest>=8.0.0",
 ]
+

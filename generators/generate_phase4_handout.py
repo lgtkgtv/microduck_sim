@@ -515,12 +515,6 @@ def create_handout(output_path=PDF_OUTPUT):
     doc.build(story, canvasmaker=NumberedCanvas)
     print(f"✅ Phase 4 Handout PDF successfully created: {output_path}")
 
-    if output_path != PDF_ALIAS:
-        import shutil
-        shutil.copyfile(output_path, PDF_ALIAS)
-        print(f"✅ Created alias copy: {PDF_ALIAS}")
-
-
 def main():
     print("=" * 60)
     print("📄 Building Phase 4 Handout: Brain Surgery & Edge Inference...")

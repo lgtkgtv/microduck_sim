@@ -23,9 +23,9 @@ import onnxruntime as ort
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(SCRIPT_DIR, "kinematics", "assets", "alpha", "robot_walk.xml")
-EDU_MODEL_PATH = os.path.join(SCRIPT_DIR, "microduck.xml")
+EDU_MODEL_PATH = os.path.join(SCRIPT_DIR, "kinematics", "educational", "microduck_15dof.xml")
 POLICY_DIR = os.path.join(SCRIPT_DIR, "policies")
-CLAMPED_POLICY_PATH = os.path.join(SCRIPT_DIR, "microduck_walking_policy.onnx")
+CLAMPED_POLICY_PATH = os.path.join(SCRIPT_DIR, "policies", "checkpoints", "microduck_walking_policy.onnx")
 
 # Color formatting for terminal
 GREEN = "\033[92m"

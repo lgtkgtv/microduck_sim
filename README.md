@@ -108,23 +108,34 @@ A complete semester-long curriculum taking students from hardware kinematics to 
 
 ## 🛠️ Verification & Execution Pipeline
 
+```bash
+# 1. Run full test suite with Pytest
+uv run pytest
+
+# 2. Verify all 6 curriculum phases mathematically & empirically
+uv run verify_curriculum.py
+
+# 3. Verify 100% of website plumbing & links
+uv run verify_web_plumbing.py
+```
+
 ```text
-[ Step 1: Verification ] uv run verify_curriculum.py   # Empirically prove all 6 curriculum phases
+[ Step 1: Verification ] uv run pytest / verify_curriculum.py # Empirically prove all 6 curriculum phases
           │
           ▼
-[ Step 2: Web Plumbing ] uv run verify_web_plumbing.py # Ensure 0 broken links on GitHub Pages
+[ Step 2: Web Plumbing ] uv run verify_web_plumbing.py        # Ensure 0 broken links on GitHub Pages
           │
           ▼
-[ Step 3: Simulation ]   uv run duck_drop.py          # Verify MuJoCo physics & contact dynamics
+[ Step 3: Simulation ]   uv run duck_drop.py                 # Verify MuJoCo physics & contact dynamics
           │
           ▼
-[ Step 4: RL Training ]  uv run train_microduck.py    # Train PPO locomotion policy in Gymnasium
+[ Step 4: RL Training ]  uv run train_microduck.py           # Train PPO locomotion policy in Gymnasium
           │
           ▼
-[ Step 5: Silicon Clamp] uv run export_to_onnx.py     # Extract Actor & bake [-1.0, 1.0] torque clamps
+[ Step 5: Silicon Clamp] uv run export_to_onnx.py            # Extract Actor & bake [-1.0, 1.0] torque clamps
           │
           ▼
-[ Step 6: Edge Control ] uv run main.py               # Run 50Hz dual-loop async controller
+[ Step 6: Edge Control ] uv run main.py                      # Run 50Hz dual-loop async controller
 ```
 
 ---
@@ -137,7 +148,7 @@ The repository is structured into modular, self-contained directories:
 microduck_sim/
 ├── index.html                                        # Mission Control Web Portal (GitHub Pages Entry)
 │
-├── curriculum/                                       # 6 Interactive HTML Slide Decks
+├── curriculum/                                       # 🎓 6 Interactive HTML Slide Decks (Canonical Content)
 │   ├── phase1_anatomy.html                           # Hardware, CAN bus & 50Hz budget
 │   ├── phase2_matrix.html                            # MuJoCo MjModel vs MjData & forward dynamics
 │   ├── phase3_dogtrainer.html                        # Gymnasium observation/action & PPO reward math
@@ -145,26 +156,34 @@ microduck_sim/
 │   ├── phase5_nervoussystem.html                     # 50Hz asynchronous dual-loop control
 │   └── phase6_securingswarm.html                     # A/B OTA updates, CI gates & cryptographic checksums
 │
-├── docs/                                             # High-Resolution PDF Handouts & Book
+├── docs/                                             # 📄 High-Resolution PDF Handouts & Book
 │   ├── Phase1_Anatomy_Handout.pdf ... Phase6_*.pdf   # Individual 3-4 page printable module handouts
 │   ├── Microduck_Physical_AI_Masterclass_Complete_Book.pdf # Full 19-page integrated master manual
 │   └── microduck_all_handouts.zip                   # Complete bundled zip archive
 │
-├── images/                                          # 26 Technical Engineering Diagrams
+├── images/                                          # 🖼️ 26 Technical Engineering Diagrams (400x300 PNGs)
 │   ├── rockchip_rk3566.png, kinematic_tree.png ...   # Used across web slides and PDF books
 │
-├── generators/                                      # PDF & Diagram Generation Scripts
-│   ├── generate_handout.py ... generate_phase6_*.py  # ReportLab 2-column PDF compilers
-│   ├── generate_images.py ... generate_phase6_*.py   # Pillow 400x300 diagram rendering engines
-│   └── bundle_handouts.py                           # Merges all PDFs into the complete Master Manual
+├── notebooks/                                       # 📓 Interactive Jupyter Laboratories
+│   └── microduck_masterclass.ipynb                  # Interactive step-by-step masterclass notebook
 │
-├── kinematics/                                      # 15-DOF 3D Robot Models
-│   └── assets/alpha/robot_walk.xml                  # 18-geom production 3D simulation MJCF model
+├── generators/                                      # ⚙️ PDF & Diagram Generation Engines
+│   ├── build_all_assets.py                          # Unified single-command asset compilation pipeline
+│   ├── bundle_handouts.py                           # Merges all PDFs into the complete Master Manual
+│   ├── common.py                                    # Shared ReportLab canvas, colors, and styles
+│   └── generate_*.py                                # Individual phase diagram and PDF builders
 │
-├── policies/                                        # Pretrained ONNX Locomotion Policies
-│   ├── alpha_walking.onnx                           # Forward walking policy
-│   ├── alpha_stand.onnx                             # Upright balance standing policy
-│   └── ball_kick_left.onnx                          # Dynamic kick policy
+├── kinematics/                                      # 🦾 Robot Kinematic Blueprints (MJCF)
+│   ├── assets/alpha/robot_walk.xml                  # 18-geom production 3D simulation MJCF model
+│   └── educational/microduck_15dof.xml              # 15-actuator clean learning model
+│
+├── policies/                                        # 🧠 Pretrained ONNX Locomotion Policies
+│   ├── alpha_walking.onnx ...                       # Canonical production policies
+│   └── checkpoints/                                 # Training checkpoint weights & exported ONNX models
+│
+├── tests/                                           # 🧪 Automated Pytest Test Suite
+│   ├── test_curriculum.py                           # 6-Phase mathematical & physical proof tests
+│   └── test_web_plumbing.py                         # Link integrity & 404 broken route tests
 │
 ├── launch.sh                                        # One-click native simulation launcher
 ├── launch_viewer.py                                 # 3D interactive viewer with HUD & cursor
@@ -174,7 +193,6 @@ microduck_sim/
 ├── export_to_onnx.py                                # ONNX policy extractor with silicon clamping
 ├── main.py                                          # 50Hz asynchronous dual-loop edge controller
 ├── duck_drop.py                                     # Headless MuJoCo contact dynamics validation
-├── microduck.xml                                    # Clean educational 15-DOF MJCF kinematic model
 ├── pyproject.toml                                   # Python project manifest & dependencies
 └── README.md                                        # Master Documentation
 ```
@@ -186,16 +204,18 @@ microduck_sim/
 | **[`curriculum/`](curriculum/)** | Houses the 6 interactive web slide decks. Each slide contains embedded interactive widgets, real-time formula calculators, 3D diagrams, and self-grading quizzes with local storage progress tracking. |
 | **[`docs/`](docs/)** | Stores all printable course literature: the 6 individual PDF handouts, the 19-page comprehensive master manual, and student zip bundles. |
 | **[`images/`](images/)** | Contains the 26 technical diagrams (400x300 PNGs) illustrating kinematics, control loops, neural network graphs, and hardware schematics. |
-| **[`generators/`](generators/)** | Contains the 13 Python scripts responsible for programmatically rendering the diagram assets and compiling the PDF companion books via ReportLab and Pillow. |
-| **[`kinematics/`](kinematics/)** | Contains the official 3D MJCF kinematic models (`robot_walk.xml`), defining joint limits, inertial properties, and 18 collision geometries for the Microduck. |
-| **[`policies/`](policies/)** | Houses pretrained neural network policies in ONNX format (`alpha_walking.onnx`, `alpha_stand.onnx`, `ball_kick_left.onnx`, etc.) for direct execution in simulation or deployment to hardware. |
-| **[`verify_curriculum.py`](verify_curriculum.py)** | Mathematical and physical test suite validating all 6 curriculum modules against actual code, forward dynamics, and neural network weights. |
+| **[`notebooks/`](notebooks/)** | Contains interactive Jupyter notebooks for sandbox exploration and step-by-step experimentation. |
+| **[`generators/`](generators/)** | Contains the automated build pipeline ([`build_all_assets.py`](generators/build_all_assets.py)) for programmatically rendering diagrams and compiling PDF companion books. |
+| **[`kinematics/`](kinematics/)** | Contains official 3D MJCF kinematic models: the 18-geom production simulation model (`assets/alpha/robot_walk.xml`) and the clean educational reference (`educational/microduck_15dof.xml`). |
+| **[`policies/`](policies/)** | Houses pretrained neural network policies in ONNX format (`alpha_walking.onnx`, etc.) and training checkpoints in `policies/checkpoints/`. |
+| **[`tests/`](tests/)** | Automated `pytest` suite validating curriculum proofs and web plumbing. |
+| **[`verify_curriculum.py`](verify_curriculum.py)** | Standalone test suite validating all 6 curriculum modules against actual physics and neural network weights. |
 | **[`verify_web_plumbing.py`](verify_web_plumbing.py)** | Automated link integrity tool that scans HTML and dynamic JavaScript routes to guarantee 0 broken links (0 404s). |
 | **[`launch_viewer.py`](launch_viewer.py)** / **[`launch.sh`](launch.sh)** | The native GLFW 3D simulation viewer featuring an in-frame cursor, live telemetry HUD overlay, and 3D force/torque perturbation grabbing. |
 | **[`train_microduck.py`](train_microduck.py)** | Trains bipedal locomotion policies using PPO inside a custom Gymnasium environment. |
 | **[`export_to_onnx.py`](export_to_onnx.py)** | Performs "Brain Surgery": extracts the lightweight Actor network, prunes training overhead, and bakes `[-1.0, 1.0]` torque clamping into the ONNX computational graph. |
 | **[`main.py`](main.py)** | Implements the 50Hz asynchronous dual-loop edge controller that decouples the 10Hz visual cortex from the 50Hz spinal reflex loop. |
-| **[`microduck.xml`](microduck.xml)** | A clean, educational 15-DOF MJCF model designed for teaching kinematic chains and joint limit configurations. |
+
 ---
 
 ## 🔮 Future Roadmap & Development Plan

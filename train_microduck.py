@@ -1,8 +1,14 @@
+import os
 import time
 import numpy as np
 import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_checker import check_env
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CHECKPOINT_DIR = os.path.join(SCRIPT_DIR, "policies", "checkpoints")
+os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+MODEL_SAVE_PATH = os.path.join(CHECKPOINT_DIR, "microduck_ppo_policy")
 
 # 1. Define the Custom Gymnasium Environment
 class MicroduckEnv(gym.Env):
@@ -59,8 +65,8 @@ def main():
     print("🏃 Starting the 10,000 timestep training run...")
     model.learn(total_timesteps=10000)
     
-    print("💾 Saving the trained policy...")
-    model.save("microduck_ppo_policy")
+    print(f"💾 Saving the trained policy to {MODEL_SAVE_PATH}.zip...")
+    model.save(MODEL_SAVE_PATH)
     print("✅ Training complete!")
 
 if __name__ == "__main__":
