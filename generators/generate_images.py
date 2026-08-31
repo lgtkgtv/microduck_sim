@@ -16,7 +16,9 @@ import os
 from PIL import Image, ImageDraw, ImageFont
 
 # Ensure images directory exists in project root
-IMG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "images")
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+IMG_DIR = os.path.join(PROJECT_ROOT, "images")
 os.makedirs(IMG_DIR, exist_ok=True)
 
 # Supersampling factor for crisp anti-aliasing

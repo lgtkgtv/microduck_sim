@@ -17,10 +17,13 @@ from reportlab.platypus import (
 from reportlab.pdfgen import canvas
 
 # Ensure paths
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+sys.path.insert(0, SCRIPT_DIR)
 IMG_DIR = os.path.join(PROJECT_ROOT, "images")
-PDF_OUTPUT = os.path.join(PROJECT_ROOT, "Phase4_BrainSurgery_Handout.pdf")
-PDF_ALIAS = os.path.join(PROJECT_ROOT, "microduck_phase4_handout.pdf")
+DOCS_DIR = os.path.join(PROJECT_ROOT, "docs")
+os.makedirs(DOCS_DIR, exist_ok=True)
+PDF_OUTPUT = os.path.join(DOCS_DIR, "Phase4_BrainSurgery_Handout.pdf")
 
 REQUIRED_IMAGES = [
     "actor_extraction.png",
