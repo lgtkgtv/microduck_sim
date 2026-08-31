@@ -196,9 +196,23 @@ microduck_sim/
 | **[`export_to_onnx.py`](export_to_onnx.py)** | Performs "Brain Surgery": extracts the lightweight Actor network, prunes training overhead, and bakes `[-1.0, 1.0]` torque clamping into the ONNX computational graph. |
 | **[`main.py`](main.py)** | Implements the 50Hz asynchronous dual-loop edge controller that decouples the 10Hz visual cortex from the 50Hz spinal reflex loop. |
 | **[`microduck.xml`](microduck.xml)** | A clean, educational 15-DOF MJCF model designed for teaching kinematic chains and joint limit configurations. |
+---
+
+## 🔮 Future Roadmap & Development Plan
+
+While physical Microduck hardware is not currently on hand, the simulation studio is designed to prepare models and assets for seamless real-world hardware deployment:
+
+| Milestone | Area | Goal & Implementation Strategy | Status |
+| :--- | :--- | :--- | :---: |
+| **1. Custom PPO Gaits** | **Reinforcement Learning** | Train specialized locomotion behaviors (rough terrain traversal, agile omnidirectional turning, dynamic push-recovery, and stair climbing) using customized reward functions in [`train_microduck.py`](train_microduck.py). | 📋 *Planned* |
+| **2. Sim-to-Real Domain Randomization** | **Robustness Engine** | Inject domain randomization into physics stepping: randomizing torso mass ($\pm 15\%$), ground friction coefficients ($\mu \in [0.4, 1.2]$), motor latency jitter, and IMU sensor noise to ensure policies transfer to real motors without retuning. | 📋 *Planned* |
+| **3. In-Browser 3D MuJoCo (WASM)** | **Zero-Install Web Classroom** | Embed WebAssembly-compiled MuJoCo (`mujoco-wasm` + Three.js) directly inside the [`curriculum/`](curriculum/) slide decks, allowing students on Chromebooks and mobile devices to run 3D simulations without installing Python. | 📋 *Planned* |
+| **4. Edge Vision & VLA Integration** | **Multimodal Physical AI** | Integrate lightweight edge vision models (e.g., MobileNet-V4 / YOLO-nano) into the 10Hz Visual Cortex thread for visual target tracking, ball chasing, and obstacle avoidance. | 📋 *Planned* |
+| **5. Hardware Deployment Bridge** | **Embedded Rust Daemon** | Build an automated CI packaging pipeline that exports signed `.onnx` policy bundles directly formatted for the Rockchip RK3566 SBC and Pollen Robotics' `robotd` daemon when hardware becomes available. | 📋 *Planned* |
 
 ---
 
 ## 📄 License & Credits
 Built upon the open-source hardware and software specifications of [Pollen Robotics Microduck](https://github.com/pollen-robotics/microduck).  
 Released under the MIT License.
+
