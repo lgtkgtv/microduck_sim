@@ -561,8 +561,8 @@ uv run python -m http.server 8000
                         const htmlBtn = card.querySelector('.btn-card-html');
                         if (htmlBtn) {
                             const slidePages = [
-                                '', 'phase1_anatomy.html', 'phase2_matrix.html', 'phase3_dogtrainer.html',
-                                'phase4_brainsurgery.html', 'phase5_nervoussystem.html', 'phase6_securingswarm.html'
+                                '', 'curriculum/phase1_anatomy.html', 'curriculum/phase2_matrix.html', 'curriculum/phase3_dogtrainer.html',
+                                'curriculum/phase4_brainsurgery.html', 'curriculum/phase5_nervoussystem.html', 'curriculum/phase6_securingswarm.html'
                             ];
                             htmlBtn.setAttribute('href', slidePages[i]);
                             htmlBtn.innerText = '🚀 Open Slide Deck';
@@ -590,8 +590,8 @@ uv run python -m http.server 8000
             const startBtn = document.getElementById('btn-start-course');
             if (startBtn) {
                 const slidePages = [
-                    '', 'phase1_anatomy.html', 'phase2_matrix.html', 'phase3_dogtrainer.html',
-                    'phase4_brainsurgery.html', 'phase5_nervoussystem.html', 'phase6_securingswarm.html'
+                    '', 'curriculum/phase1_anatomy.html', 'curriculum/phase2_matrix.html', 'curriculum/phase3_dogtrainer.html',
+                    'curriculum/phase4_brainsurgery.html', 'curriculum/phase5_nervoussystem.html', 'curriculum/phase6_securingswarm.html'
                 ];
                 startBtn.setAttribute('href', slidePages[Math.min(maxPhase, 6)]);
                 startBtn.innerText = maxPhase === 1 ? '▶️ Start Phase 1 (Anatomy)' : `▶️ Continue to Phase ${Math.min(maxPhase, 6)}`;

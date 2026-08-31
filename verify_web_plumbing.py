@@ -3,8 +3,9 @@
 verify_web_plumbing.py
 Automated static website plumbing and broken link checker for GitHub Pages.
 Scans index.html and all curriculum/*.html files to ensure:
-  • 100% of internal href links resolve to existing files
+  • 100% of internal HTML href links resolve to existing files
   • 100% of img src tags resolve to existing image assets
+  • 100% of JavaScript dynamic page routes (e.g. slidePages, location.href) resolve to real files
   • 0 broken links or 404 errors
 """
 
@@ -21,22 +22,24 @@ def check_file_plumbing(html_path):
 
     base_dir = os.path.dirname(html_path)
 
-    # Regex patterns for href and src attributes
+    # 1. Regex patterns for HTML attributes
     hrefs = re.findall(r'href=["\'](.*?)["\']', content)
     srcs = re.findall(r'src=["\'](.*?)["\']', content)
 
-    all_links = hrefs + srcs
+    # 2. Regex for JavaScript strings referencing .html or .pdf or images
+    js_strings = re.findall(r'["\']([^"\']+\.(?:html|pdf|png|zip))["\']', content)
+
+    all_links = list(set(hrefs + srcs + js_strings))
     broken = []
     verified = 0
 
     for link in all_links:
-        # Ignore external URLs, anchor fragments, and javascript
+        # Ignore external URLs, anchor fragments, and javascript:
         if link.startswith(("http://", "https://", "#", "javascript:", "mailto:")):
             continue
 
-        # Strip query parameters or hash fragments
         clean_link = link.split("?")[0].split("#")[0]
-        if not clean_link:
+        if not clean_link or clean_link.startswith("$"):
             continue
 
         target_path = os.path.normpath(os.path.join(base_dir, clean_link))
@@ -45,7 +48,7 @@ def check_file_plumbing(html_path):
         else:
             broken.append((link, target_path))
 
-    print(f"  • Verified internal links & assets: {verified}")
+    print(f"  • Verified internal links, assets & JS routes: {verified}")
     if broken:
         print(f"  ❌ Broken Links Found ({len(broken)}):")
         for orig, target in broken:
