@@ -2,30 +2,32 @@
 """
 bundle_handouts.py
 Merges all 6 phase handouts into a single Masterclass PDF Manual
-and packages them into a convenient zip file for students.
+and packages them into a convenient zip file for students in docs/.
 """
 
 import os
 import zipfile
 from pypdf import PdfWriter
 
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+DOCS_DIR = os.path.join(PROJECT_ROOT, "docs")
 
 HANDOUT_FILES = [
-    ("Phase 1: Anatomy of a Robot", os.path.join(PROJECT_ROOT, "Phase1_Anatomy_Handout.pdf")),
-    ("Phase 2: The Invisible Matrix", os.path.join(PROJECT_ROOT, "Phase2_Matrix_Handout.pdf")),
-    ("Phase 3: The Dog Trainer", os.path.join(PROJECT_ROOT, "Phase3_DogTrainer_Handout.pdf")),
-    ("Phase 4: Brain Surgery & Edge Inference", os.path.join(PROJECT_ROOT, "Phase4_BrainSurgery_Handout.pdf")),
-    ("Phase 5: The Nervous System", os.path.join(PROJECT_ROOT, "Phase5_NervousSystem_Handout.pdf")),
-    ("Phase 6: Securing the Swarm", os.path.join(PROJECT_ROOT, "Phase6_SecuringSwarm_Handout.pdf")),
+    ("Phase 1: Anatomy of a Robot", os.path.join(DOCS_DIR, "Phase1_Anatomy_Handout.pdf")),
+    ("Phase 2: The Invisible Matrix", os.path.join(DOCS_DIR, "Phase2_Matrix_Handout.pdf")),
+    ("Phase 3: The Dog Trainer", os.path.join(DOCS_DIR, "Phase3_DogTrainer_Handout.pdf")),
+    ("Phase 4: Brain Surgery & Edge Inference", os.path.join(DOCS_DIR, "Phase4_BrainSurgery_Handout.pdf")),
+    ("Phase 5: The Nervous System", os.path.join(DOCS_DIR, "Phase5_NervousSystem_Handout.pdf")),
+    ("Phase 6: Securing the Swarm", os.path.join(DOCS_DIR, "Phase6_SecuringSwarm_Handout.pdf")),
 ]
 
-MASTER_PDF = os.path.join(PROJECT_ROOT, "Microduck_Physical_AI_Masterclass_Complete_Book.pdf")
-ZIP_BUNDLE = os.path.join(PROJECT_ROOT, "microduck_all_handouts.zip")
+MASTER_PDF = os.path.join(DOCS_DIR, "Microduck_Physical_AI_Masterclass_Complete_Book.pdf")
+ZIP_BUNDLE = os.path.join(DOCS_DIR, "microduck_all_handouts.zip")
 
 def main():
     print("=" * 60)
-    print("📦 Bundling all 6 Phase Handouts...")
+    print("📦 Bundling all 6 Phase Handouts into docs/...")
     print("=" * 60)
     
     # 1. Merge into Complete Master PDF

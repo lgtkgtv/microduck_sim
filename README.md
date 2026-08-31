@@ -93,22 +93,25 @@ A complete semester-long curriculum taking students from hardware kinematics to 
 
 | Phase | Module Name | Focus Topic | Interactive Slides | Printable PDF |
 | :--- | :--- | :--- | :--- | :--- |
-| **Phase 1** | **Anatomy of a Robot** | 15-DOF Kinematics, Actuators & CAN Bus | [🚀 Launch Deck](https://lgtkgtv.github.io/microduck_sim/phase1_anatomy.html) | [📄 PDF Handout](https://lgtkgtv.github.io/microduck_sim/Phase1_Anatomy_Handout.pdf) *(4 pgs)* |
-| **Phase 2** | **The Invisible Matrix** | MuJoCo Physics, Forward Dynamics & Collision | [🚀 Launch Deck](https://lgtkgtv.github.io/microduck_sim/phase2_matrix.html) | [📄 PDF Handout](https://lgtkgtv.github.io/microduck_sim/Phase2_Matrix_Handout.pdf) *(3 pgs)* |
-| **Phase 3** | **The Dog Trainer** | Gymnasium, Reward Functions & PPO Training | [🚀 Launch Deck](https://lgtkgtv.github.io/microduck_sim/phase3_dogtrainer.html) | [📄 PDF Handout](https://lgtkgtv.github.io/microduck_sim/Phase3_DogTrainer_Handout.pdf) *(3 pgs)* |
-| **Phase 4** | **Brain Surgery** | Policy Extraction & Hardware-Safe Clamping | [🚀 Launch Deck](https://lgtkgtv.github.io/microduck_sim/phase4_brainsurgery.html) | [📄 PDF Handout](https://lgtkgtv.github.io/microduck_sim/Phase4_BrainSurgery_Handout.pdf) *(3 pgs)* |
-| **Phase 5** | **The Nervous System** | 50Hz Dual-Loop Control & Real-Time Scheduling | [🚀 Launch Deck](https://lgtkgtv.github.io/microduck_sim/phase5_nervoussystem.html) | [📄 PDF Handout](https://lgtkgtv.github.io/microduck_sim/Phase5_NervousSystem_Handout.pdf) *(3 pgs)* |
-| **Phase 6** | **Securing the Swarm** | A/B OTA Updates, CI Gates & ED25519 Crypto | [🚀 Launch Deck](https://lgtkgtv.github.io/microduck_sim/phase6_securingswarm.html) | [📄 PDF Handout](https://lgtkgtv.github.io/microduck_sim/Phase6_SecuringSwarm_Handout.pdf) *(3 pgs)* |
+| **Phase 1** | **Anatomy of a Robot** | 15-DOF Kinematics, Actuators & CAN Bus | [🚀 Launch Deck](https://lgtkgtv.github.io/microduck_sim/curriculum/phase1_anatomy.html) | [📄 PDF Handout](https://lgtkgtv.github.io/microduck_sim/docs/Phase1_Anatomy_Handout.pdf) *(4 pgs)* |
+| **Phase 2** | **The Invisible Matrix** | MuJoCo Physics, Forward Dynamics & Collision | [🚀 Launch Deck](https://lgtkgtv.github.io/microduck_sim/curriculum/phase2_matrix.html) | [📄 PDF Handout](https://lgtkgtv.github.io/microduck_sim/docs/Phase2_Matrix_Handout.pdf) *(3 pgs)* |
+| **Phase 3** | **The Dog Trainer** | Gymnasium, Reward Functions & PPO Training | [🚀 Launch Deck](https://lgtkgtv.github.io/microduck_sim/curriculum/phase3_dogtrainer.html) | [📄 PDF Handout](https://lgtkgtv.github.io/microduck_sim/docs/Phase3_DogTrainer_Handout.pdf) *(3 pgs)* |
+| **Phase 4** | **Brain Surgery** | Policy Extraction & Hardware-Safe Clamping | [🚀 Launch Deck](https://lgtkgtv.github.io/microduck_sim/curriculum/phase4_brainsurgery.html) | [📄 PDF Handout](https://lgtkgtv.github.io/microduck_sim/docs/Phase4_BrainSurgery_Handout.pdf) *(3 pgs)* |
+| **Phase 5** | **The Nervous System** | 50Hz Dual-Loop Control & Real-Time Scheduling | [🚀 Launch Deck](https://lgtkgtv.github.io/microduck_sim/curriculum/phase5_nervoussystem.html) | [📄 PDF Handout](https://lgtkgtv.github.io/microduck_sim/docs/Phase5_NervousSystem_Handout.pdf) *(3 pgs)* |
+| **Phase 6** | **Securing the Swarm** | A/B OTA Updates, CI Gates & ED25519 Crypto | [🚀 Launch Deck](https://lgtkgtv.github.io/microduck_sim/curriculum/phase6_securingswarm.html) | [📄 PDF Handout](https://lgtkgtv.github.io/microduck_sim/docs/Phase6_SecuringSwarm_Handout.pdf) *(3 pgs)* |
 
-* 📘 **[Download Complete Masterclass Manual (19 Pages)](https://lgtkgtv.github.io/microduck_sim/Microduck_Physical_AI_Masterclass_Complete_Book.pdf)**
-* 📦 **[Download All Handouts (.ZIP)](https://lgtkgtv.github.io/microduck_sim/microduck_all_handouts.zip)**
+* 📘 **[Download Complete Masterclass Manual (19 Pages)](https://lgtkgtv.github.io/microduck_sim/docs/Microduck_Physical_AI_Masterclass_Complete_Book.pdf)**
+* 📦 **[Download All Handouts (.ZIP)](https://lgtkgtv.github.io/microduck_sim/docs/microduck_all_handouts.zip)**
 
 ---
 
 ## 🛠️ Training, Verification & Execution Pipeline
 
 ```bash
-# Verify all 6 curriculum phases mathematically & empirically
+# 1. Verify 100% of website plumbing & links
+uv run verify_web_plumbing.py
+
+# 2. Verify all 6 curriculum phases mathematically & empirically
 uv run verify_curriculum.py
 ```
 
@@ -116,16 +119,19 @@ uv run verify_curriculum.py
 [ Step 1: Verification ] uv run verify_curriculum.py   # Empirically prove all 6 curriculum phases
           │
           ▼
-[ Step 2: Simulation ]   uv run duck_drop.py          # Verify MuJoCo physics & contact dynamics
+[ Step 2: Web Plumbing ] uv run verify_web_plumbing.py # Ensure 0 broken links on GitHub Pages
           │
           ▼
-[ Step 3: RL Training ]  uv run train_microduck.py    # Train PPO locomotion policy in Gymnasium
+[ Step 3: Simulation ]   uv run duck_drop.py          # Verify MuJoCo physics & contact dynamics
           │
           ▼
-[ Step 4: Silicon Clamp] uv run export_to_onnx.py     # Extract Actor & bake [-1.0, 1.0] torque clamps
+[ Step 4: RL Training ]  uv run train_microduck.py    # Train PPO locomotion policy in Gymnasium
           │
           ▼
-[ Step 5: Edge Control ] uv run main.py               # Run 50Hz dual-loop async controller
+[ Step 5: Silicon Clamp] uv run export_to_onnx.py     # Extract Actor & bake [-1.0, 1.0] torque clamps
+          │
+          ▼
+[ Step 6: Edge Control ] uv run main.py               # Run 50Hz dual-loop async controller
 ```
 
 ---
@@ -134,14 +140,25 @@ uv run verify_curriculum.py
 
 ```
 microduck_sim/
-├── index.html                                        # Mission Control Web Portal (GitHub Pages)
-├── phase1_anatomy.html ... phase6_securingswarm.html # 6 Interactive HTML slide decks
-├── Phase1_Anatomy_Handout.pdf ... Phase6_*.pdf       # 6 Printable ReportLab PDF handouts
-├── Microduck_Physical_AI_Masterclass_Complete_Book.pdf # Full 19-page masterclass manual
-├── microduck_all_handouts.zip                       # All PDF handouts in one bundle
+├── index.html                                        # Mission Control Web Portal (GitHub Pages Entry)
+│
+├── curriculum/                                       # 6 Interactive HTML slide decks
+│   ├── phase1_anatomy.html
+│   ├── phase2_matrix.html
+│   ├── phase3_dogtrainer.html
+│   ├── phase4_brainsurgery.html
+│   ├── phase5_nervoussystem.html
+│   └── phase6_securingswarm.html
+│
+├── docs/                                             # Printable PDF Handouts & Book
+│   ├── Phase1_Anatomy_Handout.pdf ... Phase6_*.pdf
+│   ├── Microduck_Physical_AI_Masterclass_Complete_Book.pdf
+│   └── microduck_all_handouts.zip
 │
 ├── launch.sh                                        # One-click native simulation launcher
 ├── launch_viewer.py                                 # 3D interactive viewer with HUD & cursor
+├── verify_curriculum.py                             # Automated 6-phase curriculum verification suite
+├── verify_web_plumbing.py                           # Automated link integrity & 404 checker
 ├── train_microduck.py                               # PPO Reinforcement Learning pipeline
 ├── export_to_onnx.py                                # ONNX policy extractor with silicon clamping
 ├── main.py                                          # 50Hz asynchronous dual-loop edge controller
