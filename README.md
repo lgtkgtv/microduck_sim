@@ -13,29 +13,34 @@ This repository contains everything needed to simulate the robot in 3D physics, 
 
 ---
 
-## 🧭 Understanding the Two Repositories
+## 🌉 Physical AI: From Digital Twin to Physical Hardware
 
-If you are working in the `~/agy_projects/physical_ai/` workspace, you will notice two directories:
+This repository is a **100% self-contained Digital Twin and Learning Studio**. Anyone cloning `microduck_sim` gets a complete, standalone simulation and training environment that runs out of the box on any standard PC, laptop, or Linux/WSL2 setup without requiring physical robot hardware.
+
+### 🔄 The Sim-to-Real Architecture
 
 ```text
-~/agy_projects/physical_ai/
-├── microduck_sim/   <-- (THIS REPO) Complete Simulation, RL & Masterclass Studio
-└── microduck/       <-- (UPSTREAM FIRMWARE) Official Embedded Rust Daemons for RK3566
++-------------------------------------------------------------------------------+
+|                       microduck_sim (This Repository)                         |
+|  • 3D Native MuJoCo Simulation (18 Geoms, GLFW Viewer, Perturbations)         |
+|  • PPO Reinforcement Learning Pipeline (Gymnasium Environment)                |
+|  • Silicon Hardware Clamping & ONNX Policy Extraction                         |
+|  • 6-Phase Web Masterclass & Printable Technical Literature                   |
++---------------------------------------+---------------------------------------+
+                                        │
+                                        │ (Exported .onnx Policies)
+                                        ▼
++-------------------------------------------------------------------------------+
+|                     Physical Microduck (Target Hardware)                      |
+|  • Rockchip RK3566 Single Board Computer (Quad-core ARM Cortex-A55)           |
+|  • Embedded Low-Level Control Daemons (e.g. robotd / duckctl)                 |
+|  • 15x STS3215 High-Torque Bus Servos over Serial/CAN Bus                     |
+|  • 50Hz Real-Time Locomotion Heartbeat (< 20ms Control Loop)                   |
++-------------------------------------------------------------------------------+
 ```
 
-### How They Differ & Work Together:
-
-| Feature | `microduck_sim` *(This Repo)* | `microduck` *(Upstream Firmware)* |
-| :--- | :--- | :--- |
-| **Role** | **The Digital Twin & Learning Studio** | **The Physical Robot Firmware** |
-| **Language Stack** | Python 3.12, MuJoCo, PyTorch, ONNX, HTML5/JS | Rust (`cargo` workspace), C/C++ FFI |
-| **Primary Output** | 3D Interactive Simulation, Trained ONNX Policies, Web Curriculum | Compiled binary daemons (`robotd`, `duckctl`) for the Rockchip RK3566 SBC |
-| **Hardware Needed?** | ❌ None (Runs 100% on your laptop / PC / WSL2) | ⚠️ Requires physical Microduck hardware |
-| **Self-Contained?** | ✅ **Yes** (100% standalone, ready to run) | ⚠️ Embedded firmware targeting ARM Linux |
-
-### 🌉 The Sim-to-Real Bridge:
-1. **Develop in Simulation (`microduck_sim`):** You build the 3D kinematic model, train PPO neural walking policies in MuJoCo, and extract them into clamped `.onnx` files.
-2. **Deploy to Hardware (`microduck`):** The resulting `.onnx` policy files are loaded by the low-level Rust `robotd` daemon on the physical robot to execute the 50Hz motor control loop.
+1. **Simulation & Training (`microduck_sim`):** Build 3D kinematic models, train bipedal locomotion policies using PPO in MuJoCo, and extract hardware-safe `.onnx` models with silicon torque limits.
+2. **Physical Deployment (Sim-to-Real):** The exported `.onnx` policies can then be deployed directly to physical robots running embedded control daemons (such as Pollen Robotics' [Microduck firmware](https://github.com/pollen-robotics/microduck) on the Rockchip RK3566 SBC).
 
 ---
 
