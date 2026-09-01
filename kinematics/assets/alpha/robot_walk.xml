@@ -34,7 +34,7 @@
               <body name="ankle_left" pos="-0 0.042 -0.026" quat="0 1 0 -0">
                 <joint axis="0 0 1" name="left_ankle" type="hinge" range="-1.5707963267949019 1.5707963267948912" />
                 <inertial pos="-0.0064761 -0.0135798 -0.0156785" mass="0.0264653" fullinertia="5.54455e-06 1.04088e-05 7.28364e-06 -1.94121e-07 8.6681e-08 5.8663e-08" />
-                <geom name="left_foot_geom" type="box" size="0.022 0.015 0.005" pos="-0.006 -0.013 -0.015" rgba="0.95 0.4 0.05 1" />
+                <geom name="left_foot_geom" type="box" size="0.040 0.025 0.006" pos="-0.008 -0.013 -0.015" rgba="0.95 0.4 0.05 1" contype="1" conaffinity="1" friction="2.0 0.01 0.001" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <site group="3" name="left_foot" pos="-0 -0.0237879 -0.0140852" quat="0 -0 0.707107 0.707107" />
               </body>
             </body>
@@ -97,7 +97,7 @@
               <body name="ankle_right" pos="-0.042 -0 -0.026" quat="0 -0.707107 0.707107 0">
                 <joint axis="0 0 1" name="right_ankle" type="hinge" range="-1.5707963267949028 1.5707963267948903" />
                 <inertial pos="-0.00647683 0.0135791 -0.0156784" mass="0.0264654" fullinertia="5.54401e-06 1.04095e-05 7.28472e-06 1.94071e-07 8.5523e-08 -5.871e-08" />
-                <geom name="right_foot_geom" type="box" size="0.022 0.015 0.005" pos="-0.006 0.013 -0.015" rgba="0.95 0.4 0.05 1" />
+                <geom name="right_foot_geom" type="box" size="0.040 0.025 0.006" pos="-0.008 0.013 -0.015" rgba="0.95 0.4 0.05 1" contype="1" conaffinity="1" friction="2.0 0.01 0.001" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" />
                 <site group="3" name="right_foot" pos="-0 0.0237879 -0.0140852" quat="0 -0 0.707107 -0.707107" />
               </body>
             </body>
@@ -106,4 +106,32 @@
       </body>
     </body>
   </worldbody>
+
+  <sensor>
+    <gyro name="imu_ang_vel" site="imu"/>
+    <accelerometer name="imu_accel" site="imu"/>
+  </sensor>
+
+  <default>
+    <joint damping="0.05" armature="0.003" frictionloss="0.01"/>
+    <position kp="40" kv="2.0" forcerange="-2.5 2.5" ctrllimited="true"/>
+    <geom contype="0" conaffinity="0" friction="1.5 0.005 0.0001"/>
+  </default>
+
+  <actuator>
+    <position name="motor_left_hip_yaw" joint="left_hip_yaw" ctrlrange="-0.436 0.524"/>
+    <position name="motor_left_hip_roll" joint="left_hip_roll" ctrlrange="-0.384 0.384"/>
+    <position name="motor_left_hip_pitch" joint="left_hip_pitch" ctrlrange="-1.571 1.571"/>
+    <position name="motor_left_knee" joint="left_knee" ctrlrange="-1.571 1.571"/>
+    <position name="motor_left_ankle" joint="left_ankle" ctrlrange="-1.571 1.571"/>
+    <position name="motor_neck_pitch" joint="neck_pitch" kp="80" kv="2" ctrlrange="-1.571 1.047"/>
+    <position name="motor_head_pitch" joint="head_pitch" kp="80" kv="2" ctrlrange="-1.571 1.571"/>
+    <position name="motor_head_yaw" joint="head_yaw" kp="80" kv="2" ctrlrange="-2.967 2.967"/>
+    <position name="motor_head_roll" joint="head_roll" kp="80" kv="2" ctrlrange="-0.436 0.436"/>
+    <position name="motor_right_hip_yaw" joint="right_hip_yaw" ctrlrange="-0.524 0.436"/>
+    <position name="motor_right_hip_roll" joint="right_hip_roll" ctrlrange="-0.384 0.384"/>
+    <position name="motor_right_hip_pitch" joint="right_hip_pitch" ctrlrange="-1.571 1.571"/>
+    <position name="motor_right_knee" joint="right_knee" ctrlrange="-1.571 1.571"/>
+    <position name="motor_right_ankle" joint="right_ankle" ctrlrange="-1.571 1.571"/>
+  </actuator>
 </mujoco>

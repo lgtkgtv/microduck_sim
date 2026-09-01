@@ -12,4 +12,9 @@ wheels/
 *.zip
 !docs/microduck_all_handouts.zip
 !policies/checkpoints/*.zip
+
+# MuJoCo logs
+MUJOCO_LOG.TXT
+*.log
 .ipynb_checkpoints/
+microduck_policy.onnx*

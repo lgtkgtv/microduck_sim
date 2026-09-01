@@ -20,5 +20,6 @@ dependencies = [
     "stable-baselines3>=2.9.0",
     "torch>=2.13.0",
     "pytest>=8.0.0",
+    "matplotlib>=3.11.1",
 ]
 

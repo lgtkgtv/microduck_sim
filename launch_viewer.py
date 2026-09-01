@@ -2,15 +2,14 @@
 """
 launch_viewer.py
 Comprehensive Interactive MuJoCo Simulation Viewer for the Pollen Robotics Microduck.
-Features:
-- Complete Model Diagnostics & Kinematics Banner (nq, nv, njnt, nbody, dt, Hz)
-- Full 3D Camera Controls (Orbit, Pan, Zoom) with Dynamic Root Tracking
-- Interactive Physics Perturbation (Ctrl + Click & Drag to grab and pull bodies)
-- Live ONNX Locomotion Policy Playback & 50Hz Real-Time Inference Loop
-- Keyboard Locomotion Driving (WASD / Arrow Keys for commanded velocities & turns)
-- Visual Flags Toggles ([J]oints, [S]ites, [C]ontacts, [I]nertia, [T]ransparent, [F]loor)
-- Live Kinematics & Locomotion Telemetry HUD (Trunk z-height, IMU Roll/Pitch/Yaw, Commanded Velocities)
-- Guaranteed In-Frame OpenGL Rendered Cursor (WSLg & Linux compatible)
+
+Architecture:
+- ViewerConfig: Configuration parameters, physical limits, and nominal poses.
+- ActionLogger: Colorized, structured console logging of user intents and system responses.
+- SimulationState: Thread-safe state container for driving commands, heading, and physics clocks.
+- PolicyController: 61-D observation assembly, 50Hz inference decimation, and closed-loop heading stabilization.
+- TerminalInputListener: Background daemon thread for seamless non-blocking terminal input.
+- MuJoCoViewer: GLFW rendering loop, orbit/pan/zoom camera, spring perturbations, visual toggles, and HUD overlay.
 """
 
 import os
@@ -18,6 +17,9 @@ import sys
 import time
 import math
 import argparse
+import threading
+import select
+from dataclasses import dataclass
 import glfw
 import mujoco
 import numpy as np
@@ -30,533 +32,595 @@ try:
 except ImportError:
     HAS_ONNX = False
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_MODEL_PATH = os.path.join(SCRIPT_DIR, "kinematics", "assets", "alpha", "robot_walk.xml")
+
+# ==============================================================================
+# 1. Configuration & Constants
+# ==============================================================================
+@dataclass
+class ViewerConfig:
+    """Simulation and locomotion parameters."""
+    # 14-actuator nominal standing pose (left leg, neck/head, right leg)
+    DEFAULT_POSITION_14 = np.array([
+        0.0, -0.0873, -0.4579, -0.0049, 0.4530,  # Left Leg: hip_yaw, hip_roll, hip_pitch, knee, ankle
+        0.3491, 0.3491, 0.0, 0.0,               # Neck/Head: neck_pitch, head_pitch, head_yaw, head_roll
+        0.0, 0.0873, 0.4579, 0.0049, -0.4530    # Right Leg: hip_yaw, hip_roll, hip_pitch, knee, ankle
+    ], dtype=np.float32)
+
+    # Locomotion velocities
+    FORWARD_VX: float = 0.22        # m/s forward walking
+    BACKWARD_VX: float = -0.24      # m/s reverse walking
+    TURN_VX: float = 0.20           # m/s forward speed while turning
+    HEADING_STEP_DEG: float = 35.0  # degrees heading change per A/D press
+    HEADING_KP: float = 1.5         # Course correction gain
+    MAX_YAW_RATE: float = 0.65      # Max yaw command magnitude (rad/s)
+    ACTION_SCALE: float = 0.40      # Policy action scaling factor
+    
+    # Timing
+    PHYSICS_TIMESTEP: float = 0.002 # 500 Hz physics
+    POLICY_DECIMATION: int = 10     # 50 Hz policy (500 / 10)
 
 
-def quat_to_euler_deg(q):
-    """Converts a quaternion [w, x, y, z] to Euler angles in degrees (roll, pitch, yaw)."""
-    w, x, y, z = q
-    # Roll (x-axis rotation)
-    sinr_cosp = 2.0 * (w * x + y * z)
-    cosr_cosp = 1.0 - 2.0 * (x * x + y * y)
-    roll = math.atan2(sinr_cosp, cosr_cosp)
+# ==============================================================================
+# 2. Action & Telemetry Logger
+# ==============================================================================
+class ActionLogger:
+    """Formatted, structured console logger for user actions and system states."""
+    HEADER = "\033[95m"
+    BLUE = "\033[94m"
+    CYAN = "\033[96m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    BOLD = "\033[1m"
+    RESET = "\033[0m"
 
-    # Pitch (y-axis rotation)
-    sinp = 2.0 * (w * y - z * x)
-    if abs(sinp) >= 1.0:
-        pitch = math.copysign(math.pi / 2.0, sinp)
-    else:
-        pitch = math.asin(sinp)
+    @classmethod
+    def log_action(cls, key_name: str, action_desc: str, details: str = ""):
+        """Logs an explicit user action and the engine's response."""
+        timestamp = time.strftime("%H:%M:%S")
+        prefix = f"{cls.CYAN}[{timestamp}]{cls.RESET} {cls.BOLD}[USER INPUT: {key_name}]{cls.RESET}"
+        msg = f"{cls.GREEN}➔ {action_desc}{cls.RESET}"
+        if details:
+            msg += f" {cls.YELLOW}({details}){cls.RESET}"
+        print(f"\r{prefix} {msg}")
 
-    # Yaw (z-axis rotation)
-    siny_cosp = 2.0 * (w * z + x * y)
-    cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
-    yaw = math.atan2(siny_cosp, cosy_cosp)
+    @classmethod
+    def log_status(cls, status_msg: str):
+        """Prints a general status message."""
+        print(f"\r{cls.BLUE}ℹ️  {status_msg}{cls.RESET}")
 
-    return (math.degrees(roll), math.degrees(pitch), math.degrees(yaw))
+    @classmethod
+    def log_error(cls, error_msg: str):
+        """Prints an error message."""
+        print(f"\r{cls.RED}❌ ERROR: {error_msg}{cls.RESET}")
 
-def render_gl_cursor(x, y, win_w, win_h, fb_w, fb_h, is_dragging, is_perturbing):
-    """
-    Renders an in-frame, high-visibility 2D cursor directly onto the framebuffer.
-    Resets MuJoCo's GLSL shader program and VAOs so fixed-function 2D rendering works.
-    """
-    # 1. Reset Modern OpenGL shader state
-    gl.glUseProgram(0)
-    gl.glBindVertexArray(0)
-    gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-    gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
 
-    # 2. Viewport and Projection
-    gl.glViewport(0, 0, fb_w, fb_h)
-    gl.glMatrixMode(gl.GL_PROJECTION)
-    gl.glPushMatrix()
-    gl.glLoadIdentity()
-    gl.glOrtho(0, win_w, win_h, 0, -1, 1)
+# ==============================================================================
+# 3. Simulation State Container
+# ==============================================================================
+class SimulationState:
+    """Encapsulates the dynamic state of the simulation and user controls."""
+    def __init__(self, config: ViewerConfig):
+        self.config = config
+        self.cmd_vx: float = 0.0
+        self.cmd_vy: float = 0.0
+        self.cmd_vtheta: float = 0.0
+        self.target_heading: float = 0.0  # Radians in world frame
+        self.paused: bool = False
+        self.step_count: int = 0
+        self.sim_time_accumulator: float = 0.0
+        self.last_action = np.zeros(14, dtype=np.float32)
+        self.last_infer_time_ms: float = 0.0
 
-    gl.glMatrixMode(gl.GL_MODELVIEW)
-    gl.glPushMatrix()
-    gl.glLoadIdentity()
+    @property
+    def is_driving(self) -> bool:
+        """Returns True if user has commanded active movement."""
+        return abs(self.cmd_vx) > 0.02 or abs(self.cmd_vtheta) > 0.02
 
-    # 3. Blending and 2D state
-    gl.glDisable(gl.GL_DEPTH_TEST)
-    gl.glDisable(gl.GL_CULL_FACE)
-    gl.glDisable(gl.GL_LIGHTING)
-    gl.glEnable(gl.GL_BLEND)
-    gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+    def reset_controls(self):
+        """Resets velocity commands and target heading to zero."""
+        self.cmd_vx = 0.0
+        self.cmd_vy = 0.0
+        self.cmd_vtheta = 0.0
+        self.target_heading = 0.0
+        self.last_action.fill(0.0)
 
-    # Pick cursor color theme
-    if is_perturbing:
-        main_color = (1.0, 0.2, 0.2, 1.0)  # Red for force perturbation
-    elif is_dragging:
-        main_color = (1.0, 0.85, 0.0, 1.0)  # Gold for camera orbit/pan
-    else:
-        main_color = (0.1, 0.95, 1.0, 1.0)  # Electric Cyan for hover
 
-    # A. Circular Targeting Ring
-    gl.glColor4f(0.0, 0.0, 0.0, 0.8)
-    gl.glLineWidth(3.5)
-    gl.glBegin(gl.GL_LINE_LOOP)
-    for angle in range(0, 360, 20):
-        rad = math.radians(angle)
-        gl.glVertex2f(x + math.cos(rad) * 10, y + math.sin(rad) * 10)
-    gl.glEnd()
+# ==============================================================================
+# 4. Policy Controller & Kinematics Math
+# ==============================================================================
+def quat_rotate_inverse(q: np.ndarray, v: np.ndarray) -> np.ndarray:
+    """Rotates a vector v from world frame into body frame using quaternion q."""
+    qc = np.array([q[0], -q[1], -q[2], -q[3]], dtype=np.float64)
+    res = np.zeros(3, dtype=np.float64)
+    mujoco.mju_rotVecQuat(res, v.astype(np.float64), qc)
+    return res
 
-    gl.glColor4f(*main_color)
-    gl.glLineWidth(1.8)
-    gl.glBegin(gl.GL_LINE_LOOP)
-    for angle in range(0, 360, 20):
-        rad = math.radians(angle)
-        gl.glVertex2f(x + math.cos(rad) * 9, y + math.sin(rad) * 9)
-    gl.glEnd()
+def quat_to_yaw(q: np.ndarray) -> float:
+    """Extracts yaw angle (radians) from quaternion [w, x, y, z]."""
+    return math.atan2(2.0 * (q[0]*q[3] + q[1]*q[2]), 1.0 - 2.0 * (q[2]**2 + q[3]**2))
 
-    # B. Arrow Outline (Black)
-    gl.glColor4f(0.0, 0.0, 0.0, 1.0)
-    gl.glLineWidth(4.0)
-    gl.glBegin(gl.GL_LINE_LOOP)
-    gl.glVertex2f(x, y)
-    gl.glVertex2f(x + 18, y + 13)
-    gl.glVertex2f(x + 10, y + 13)
-    gl.glVertex2f(x + 15, y + 23)
-    gl.glVertex2f(x + 11, y + 25)
-    gl.glVertex2f(x + 6, y + 15)
-    gl.glVertex2f(x, y + 19)
-    gl.glEnd()
+def wrap_to_pi(angle: float) -> float:
+    """Wraps an angle to [-pi, +pi]."""
+    return (angle + math.pi) % (2.0 * math.pi) - math.pi
 
-    # C. Arrow Interior
-    gl.glColor4f(*main_color)
-    gl.glBegin(gl.GL_TRIANGLES)
-    gl.glVertex2f(x, y)
-    gl.glVertex2f(x + 17, y + 13)
-    gl.glVertex2f(x + 6, y + 15)
 
-    gl.glVertex2f(x + 10, y + 13)
-    gl.glVertex2f(x + 14, y + 23)
-    gl.glVertex2f(x + 7, y + 15)
-    gl.glEnd()
+class PolicyController:
+    """Manages ONNX policy execution, 61-D observation assembly, and closed-loop heading lock."""
+    def __init__(self, policy_path: str, config: ViewerConfig):
+        self.config = config
+        self.policy_path = policy_path
+        self.session = None
+        self.input_name = "obs"
 
-    # D. Center Precision Dot
-    gl.glColor4f(1.0, 1.0, 1.0, 1.0)
-    gl.glPointSize(4.0)
-    gl.glBegin(gl.GL_POINTS)
-    gl.glVertex2f(x, y)
-    gl.glEnd()
-
-    # 4. Restore OpenGL State
-    gl.glEnable(gl.GL_DEPTH_TEST)
-    gl.glPopMatrix()
-    gl.glMatrixMode(gl.GL_PROJECTION)
-    gl.glPopMatrix()
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Microduck Physical AI Interactive 3D Simulation Viewer")
-    parser.add_argument("--model", type=str, default=DEFAULT_MODEL_PATH, help="Path to MJCF model XML file")
-    parser.add_argument("--policy", type=str, default=None, help="Path to pre-trained ONNX policy model (e.g. policies/alpha_walking.onnx)")
-    parser.add_argument("--speed", type=float, default=1.0, help="Simulation speed multiplier (default: 1.0)")
-    return parser.parse_args()
-
-def main():
-    args = parse_args()
-    model_path = args.model
-    policy_path = args.policy
-
-    print("=" * 65)
-    print("🦆 Microduck Physical AI Native Simulation Viewer")
-    print("=" * 65)
-    print(f"Loading MJCF model from: {model_path}")
-
-    if not os.path.exists(model_path):
-        print(f"❌ Error: Model file not found at {model_path}")
-        sys.exit(1)
-
-    # 1. Initialize ONNX Policy if provided
-    ort_session = None
-    policy_input_name = None
-    policy_input_shape = None
-    policy_name = "None (Passive Physics)"
-
-    if policy_path:
-        if not HAS_ONNX:
-            print("⚠️ Warning: 'onnxruntime' is not installed. Running in passive physics mode.")
-        elif not os.path.exists(policy_path):
-            print(f"⚠️ Warning: Policy file '{policy_path}' not found. Running in passive physics mode.")
-        else:
+        if policy_path and HAS_ONNX and os.path.exists(policy_path):
             try:
-                ort_session = ort.InferenceSession(policy_path)
-                policy_input = ort_session.get_inputs()[0]
-                policy_input_name = policy_input.name
-                policy_input_shape = policy_input.shape
-                policy_name = os.path.basename(policy_path)
-                print(f"🧠 Loaded ONNX Locomotion Policy: {policy_name}")
-                print(f"  • Input Name: {policy_input_name} | Shape: {policy_input_shape}")
+                self.session = ort.InferenceSession(policy_path)
+                inputs = self.session.get_inputs()
+                self.input_name = inputs[0].name if inputs else "obs"
+                ActionLogger.log_status(f"Loaded ONNX Locomotion Policy: {os.path.basename(policy_path)} (Input: '{self.input_name}')")
             except Exception as e:
-                print(f"❌ Failed to load ONNX policy: {e}")
-                ort_session = None
+                ActionLogger.log_error(f"Failed to load ONNX policy: {e}")
+                self.session = None
 
-    scene_xml = f"""
-    <mujoco>
-        <option gravity="0 0 -9.81" timestep="0.002"/>
-        <asset>
-            <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="512"/>
-            <texture name="texplane" type="2d" builtin="checker" rgb1=".25 .3 .35" rgb2=".15 0.18 0.22" width="512" height="512" mark="cross" markrgb=".8 .8 .8"/>
-            <material name="matplane" reflectance="0.2" texture="texplane" texrepeat="2 2" texuniform="true"/>
-        </asset>
-        <worldbody>
-            <light directional="true" diffuse=".9 .9 .9" specular=".3 .3 .3" pos="0 0 4" dir="0 0 -1"/>
-            <geom name="floor" type="plane" pos="0 0 -0.25" size="3 3 0.1" material="matplane"/>
-        </worldbody>
-        <include file="{model_path}"/>
-    </mujoco>
-    """
-
-    model = mujoco.MjModel.from_xml_string(scene_xml)
-    data = mujoco.MjData(model)
-
-    # Print Comprehensive Model Diagnostics & Kinematics Banner
-    print("✅ Model and Scene loaded successfully!")
-    print(f"  • Generalized coordinates (nq) : {model.nq}")
-    print(f"  • Degrees of freedom (nv)      : {model.nv}")
-    print(f"  • Number of joints (njnt)      : {model.njnt}")
-    print(f"  • Number of bodies (nbody)     : {model.nbody}")
-    print(f"  • Number of geoms (ngeom)      : {model.ngeom}")
-    print(f"  • Number of actuators (nu)     : {model.nu}")
-    print(f"  • Timestep                     : {model.opt.timestep:.4f} s ({1.0/model.opt.timestep:.0f} Hz)")
-    print("-" * 65)
-
-    display = os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")
-    if not display:
-        print("ℹ️ Headless mode detected (no DISPLAY/WAYLAND_DISPLAY).")
-        print("Stepping simulation 500 times in headless mode...")
-        for _ in range(500):
-            if ort_session and policy_input_shape:
-                dim = policy_input_shape[1] if len(policy_input_shape) > 1 else 60
-                obs = np.zeros((1, dim), dtype=np.float32)
-                act = ort_session.run(None, {policy_input_name: obs})[0].flatten()
-                data.ctrl[:min(len(act), model.nu)] = np.clip(act[:model.nu], -1.0, 1.0)
-            mujoco.mj_step(model, data)
-        print(f"✅ Headless physics simulation completed: Trunk pos = {data.qpos[:3]}")
-        return
-
-    if not glfw.init():
-        print("❌ Failed to initialize GLFW.")
-        sys.exit(1)
-
-    glfw.window_hint(glfw.SAMPLES, 4)
-    glfw.window_hint(glfw.VISIBLE, glfw.TRUE)
-    window = glfw.create_window(1280, 720, "🦆 Microduck Physical AI Simulation & Masterclass", None, None)
-    if not window:
-        glfw.terminate()
-        print("❌ Failed to create GLFW window.")
-        sys.exit(1)
-
-    glfw.make_context_current(window)
-    glfw.swap_interval(1)
-
-    # MuJoCo visualization & perturbation context
-    camera = mujoco.MjvCamera()
-    option = mujoco.MjvOption()
-    scene = mujoco.MjvScene(model, maxgeom=2000)
-    context = mujoco.MjrContext(model, mujoco.mjtFontScale.mjFONTSCALE_150)
-    perturb = mujoco.MjvPerturb()
-
-    # Default visualization options: Enable Sensor Sites (group 3 has camera, ToF, IMU, feet)
-    option.sitegroup[3] = 1
-    option.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = False        # Joint axes
-    option.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = False # Contact points
-    option.flags[mujoco.mjtVisFlag.mjVIS_CONTACTFORCE] = False # Force vectors
-    option.flags[mujoco.mjtVisFlag.mjVIS_INERTIA] = False      # Inertial ellipsoids
-    option.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT] = False  # Transparent mode
-    option.flags[mujoco.mjtVisFlag.mjVIS_PERTFORCE] = True     # Render perturbation force spring
-
-    # Camera presets (Tracking trunk_base)
-    trunk_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "trunk_base")
-    camera.distance = 1.3
-    camera.elevation = -18.0
-    camera.azimuth = 100.0
-    if trunk_id >= 0:
-        camera.lookat[:] = data.xpos[trunk_id]
-
-    # Pre-render initial scene to populate camera matrices for perturbation
-    mujoco.mjv_updateScene(model, data, option, perturb, camera, mujoco.mjtCatBit.mjCAT_ALL, scene)
-    if trunk_id >= 0:
-        perturb.select = trunk_id
-        mujoco.mjv_initPerturb(model, data, scene, perturb)
-
-    # Mouse, Keyboard & Locomotion Command State
-    button_left = False
-    button_middle = False
-    button_right = False
-    mouse_x = 640.0
-    mouse_y = 360.0
-    last_x = 640.0
-    last_y = 360.0
-    paused = False
-
-    # Velocity Commands (vx, vy, vtheta)
-    cmd_vx = 0.0
-    cmd_vy = 0.0
-    cmd_vtheta = 0.0
-    last_infer_time = 0.0
-
-    def mouse_button_callback(win, button, action, mods):
-        nonlocal button_left, button_middle, button_right, last_x, last_y
-        mod_ctrl = (glfw.get_key(win, glfw.KEY_LEFT_CONTROL) == glfw.PRESS or 
-                    glfw.get_key(win, glfw.KEY_RIGHT_CONTROL) == glfw.PRESS)
-
-        if button == glfw.MOUSE_BUTTON_LEFT:
-            button_left = (action == glfw.PRESS)
-            if action == glfw.PRESS and mod_ctrl:
-                perturb.active = int(mujoco.mjtPerturb.mjPERT_TRANSLATE)
-                mujoco.mjv_initPerturb(model, data, scene, perturb)
-            elif action == glfw.RELEASE:
-                perturb.active = 0
-        elif button == glfw.MOUSE_BUTTON_RIGHT:
-            button_right = (action == glfw.PRESS)
-            if action == glfw.PRESS and mod_ctrl:
-                perturb.active = int(mujoco.mjtPerturb.mjPERT_ROTATE)
-                mujoco.mjv_initPerturb(model, data, scene, perturb)
-            elif action == glfw.RELEASE:
-                perturb.active = 0
-        elif button == glfw.MOUSE_BUTTON_MIDDLE:
-            button_middle = (action == glfw.PRESS)
-
-        last_x, last_y = glfw.get_cursor_pos(win)
-
-    def cursor_pos_callback(win, xpos, ypos):
-        nonlocal last_x, last_y, mouse_x, mouse_y
-        mouse_x = xpos
-        mouse_y = ypos
-        dx = xpos - last_x
-        dy = ypos - last_y
-        last_x = xpos
-        last_y = ypos
-
-        if not (button_left or button_middle or button_right):
-            return
-
-        width, height = glfw.get_window_size(win)
-        mod_ctrl = (glfw.get_key(win, glfw.KEY_LEFT_CONTROL) == glfw.PRESS or 
-                    glfw.get_key(win, glfw.KEY_RIGHT_CONTROL) == glfw.PRESS)
-        mod_shift = (glfw.get_key(win, glfw.KEY_LEFT_SHIFT) == glfw.PRESS or 
-                     glfw.get_key(win, glfw.KEY_RIGHT_SHIFT) == glfw.PRESS)
-
-        # Force Perturbation (Ctrl + Drag)
-        if mod_ctrl and perturb.active != 0:
-            action = int(mujoco.mjtMouse.mjMOUSE_MOVE_V) if button_left else int(mujoco.mjtMouse.mjMOUSE_ROTATE_V)
-            mujoco.mjv_movePerturb(model, data, action, dx / width, dy / height, scene, perturb)
-            return
-
-        # Standard Camera Navigation
-        if button_left and not mod_shift:
-            action = int(mujoco.mjtMouse.mjMOUSE_ROTATE_V)
-        elif button_right or (button_left and mod_shift):
-            action = int(mujoco.mjtMouse.mjMOUSE_MOVE_V)
-        elif button_middle:
-            action = int(mujoco.mjtMouse.mjMOUSE_ZOOM)
-        else:
-            action = int(mujoco.mjtMouse.mjMOUSE_NONE)
-
-        mujoco.mjv_moveCamera(model, action, dx / width, dy / height, camera)
-
-    def scroll_callback(win, xoffset, yoffset):
-        action = int(mujoco.mjtMouse.mjMOUSE_ZOOM)
-        mujoco.mjv_moveCamera(model, action, 0.0, -0.05 * yoffset, camera)
-
-    def key_callback(win, key, scancode, action, mods):
-        nonlocal paused, cmd_vx, cmd_vy, cmd_vtheta
-        if action in (glfw.PRESS, glfw.REPEAT):
-            # Locomotion Driving Controls (WASD / Arrow Keys)
-            if key in (glfw.KEY_W, glfw.KEY_UP):
-                cmd_vx = min(cmd_vx + 0.05, 0.40)
-            elif key in (glfw.KEY_S, glfw.KEY_DOWN):
-                cmd_vx = max(cmd_vx - 0.05, -0.20)
-            elif key in (glfw.KEY_A, glfw.KEY_LEFT):
-                cmd_vtheta = min(cmd_vtheta + 0.10, 0.80)
-            elif key in (glfw.KEY_D, glfw.KEY_RIGHT):
-                cmd_vtheta = max(cmd_vtheta - 0.10, -0.80)
-            elif key == glfw.KEY_X:
-                cmd_vx = 0.0
-                cmd_vy = 0.0
-                cmd_vtheta = 0.0
-
-        if action == glfw.PRESS:
-            # Space -> Pause / Resume
-            if key == glfw.KEY_SPACE:
-                paused = not paused
-            # R or Backspace -> Reset simulation & robot position
-            elif key in (glfw.KEY_R, glfw.KEY_BACKSPACE):
-                mujoco.mj_resetData(model, data)
-                mujoco.mj_forward(model, data)
-                cmd_vx = 0.0
-                cmd_vy = 0.0
-                cmd_vtheta = 0.0
-            # ESC -> Quit
-            elif key == glfw.KEY_ESCAPE:
-                glfw.set_window_should_close(win, True)
-            # J -> Toggle Joint axes
-            elif key == glfw.KEY_J:
-                option.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = not option.flags[mujoco.mjtVisFlag.mjVIS_JOINT]
-            # S -> Toggle Sensor sites
-            elif key == glfw.KEY_S:
-                option.sitegroup[3] = 0 if option.sitegroup[3] == 1 else 1
-            # C -> Toggle Contact points and forces
-            elif key == glfw.KEY_C:
-                curr = option.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT]
-                option.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = not curr
-                option.flags[mujoco.mjtVisFlag.mjVIS_CONTACTFORCE] = not curr
-            # I -> Toggle Inertial ellipsoids
-            elif key == glfw.KEY_I:
-                option.flags[mujoco.mjtVisFlag.mjVIS_INERTIA] = not option.flags[mujoco.mjtVisFlag.mjVIS_INERTIA]
-            # T -> Toggle Transparent mode
-            elif key == glfw.KEY_T:
-                option.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT] = not option.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT]
-            # F -> Toggle Floor textures
-            elif key == glfw.KEY_F:
-                option.flags[mujoco.mjtVisFlag.mjVIS_TEXTURE] = not option.flags[mujoco.mjtVisFlag.mjVIS_TEXTURE]
-
-    glfw.set_mouse_button_callback(window, mouse_button_callback)
-    glfw.set_cursor_pos_callback(window, cursor_pos_callback)
-    glfw.set_scroll_callback(window, scroll_callback)
-    glfw.set_key_callback(window, key_callback)
-
-    print("🎮 Interactive Controls Guide:")
-    print("  • WASD / Arrow Keys     : 🕹️ Drive Robot (Forward/Back/Turn Left/Right)")
-    print("  • 'X'                   : 🛑 Stop Commands (Zero Velocities)")
-    print("  • Left Click + Drag     : Orbit Camera around Duck")
-    print("  • Right Click + Drag    : Pan Camera (Up / Down / Left / Right)")
-    print("  • Scroll Wheel          : Zoom In / Out")
-    print("  • Ctrl + Left Drag      : 🪢 Grab & Pull Robot (Spring Perturbation)")
-    print("  • Ctrl + Right Drag     : 🔄 Apply Rotational Torque")
-    print("  • Spacebar              : Pause / Resume Physics")
-    print("  • 'R' / Backspace       : Reset Robot Position")
-    print("  • [J]oint | [S]ite | [C]ontact | [I]nertia | [T]ransparent : Toggle Visual Layers")
-    print("  • ESC                   : Quit Viewer")
-    print("=" * 65)
-
-    step_count = 0
-    sim_dt = model.opt.timestep
-
-    # Main Rendering & Physics Loop
-    while not glfw.window_should_close(window):
-        step_start = time.time()
-
-        if not paused:
-            # 50Hz Policy Inference Decimation (every 10 physics steps with 0.002s dt)
-            if ort_session and (step_count % 10 == 0):
+    def step(self, model: mujoco.MjModel, data: mujoco.MjData, state: SimulationState):
+        """Executes a single 50Hz control step or holds nominal standing posture."""
+        if self.session and state.is_driving:
+            if state.step_count % self.config.POLICY_DECIMATION == 0:
                 t0 = time.time()
-                dim = policy_input_shape[1] if (policy_input_shape and len(policy_input_shape) > 1) else 61
-                obs = np.zeros((1, dim), dtype=np.float32)
-                
-                # If 61D policy (microduck_rl contract): 48 proprioceptive + 13 commanded
-                if dim == 61:
-                    # Fill joint positions & velocities if available
-                    n_joints = min(14, model.nu)
-                    if model.nu > 0:
-                        obs[0, :n_joints] = data.qpos[7:7+n_joints] if len(data.qpos) >= 7+n_joints else 0.0
-                        obs[0, 14:14+n_joints] = data.qvel[6:6+n_joints] if len(data.qvel) >= 6+n_joints else 0.0
-                    # Commanded twist [vx, vy, vtheta]
-                    obs[0, 48] = cmd_vx
-                    obs[0, 49] = cmd_vy
-                    obs[0, 50] = cmd_vtheta
-                elif dim == 60:
-                    # Educational 4-frame history
-                    obs[0, :min(15, model.nu)] = data.ctrl[:min(15, model.nu)]
-                
+                obs = np.zeros((1, 61), dtype=np.float32)
+
+                # 1. Base gyro in trunk frame (freejoint qvel[3:6] is in body frame)
+                trunk_quat = data.qpos[3:7] if len(data.qpos) >= 7 else np.array([1.0, 0.0, 0.0, 0.0])
+                trunk_gyro = data.qvel[3:6] if len(data.qvel) >= 6 else np.zeros(3)
+                obs[0, 0:3] = trunk_gyro
+
+                # 2. Projected gravity vector in trunk frame
+                obs[0, 3:6] = quat_rotate_inverse(trunk_quat, np.array([0.0, 0.0, -1.0]))
+
+                # 3. Joint angles relative to nominal home pose
+                if len(data.qpos) >= 21:
+                    obs[0, 6:20] = (data.qpos[7:21] - self.config.DEFAULT_POSITION_14).astype(np.float32)
+                if len(data.qvel) >= 20:
+                    obs[0, 20:34] = data.qvel[6:20].astype(np.float32)
+
+                # 4. Previous action feedback
+                obs[0, 34:48] = state.last_action
+
+                # 5. Closed-Loop Heading Stabilization
+                current_yaw = quat_to_yaw(trunk_quat)
+                yaw_err = wrap_to_pi(current_yaw - state.target_heading)
+                effective_vtheta = float(np.clip(-self.config.HEADING_KP * yaw_err, -self.config.MAX_YAW_RATE, self.config.MAX_YAW_RATE))
+
+                # 6. Command twist vector [vx, vy, vtheta]
+                obs[0, 48] = state.cmd_vx
+                obs[0, 49] = state.cmd_vy
+                obs[0, 50] = effective_vtheta
+
                 try:
-                    raw_action = ort_session.run(None, {policy_input_name: obs})[0].flatten()
-                    clamped_action = np.clip(raw_action, -1.0, 1.0)
-                    data.ctrl[:min(len(clamped_action), model.nu)] = clamped_action[:model.nu]
-                except Exception:
-                    pass
-                last_infer_time = (time.time() - t0) * 1000.0
+                    raw_action = self.session.run(None, {self.input_name: obs})[0].flatten()
+                    state.last_action = raw_action.copy()
+                    target_pos = self.config.DEFAULT_POSITION_14 + self.config.ACTION_SCALE * raw_action
+                    data.ctrl[:model.nu] = target_pos[:model.nu]
+                except Exception as e:
+                    ActionLogger.log_error(f"Inference error: {e}")
 
-            # Apply interactive perturbation forces
-            if perturb.active != 0:
-                mujoco.mjv_applyPerturbPose(model, data, perturb, 0)
-                mujoco.mjv_applyPerturbForce(model, data, perturb)
-
-            mujoco.mj_step(model, data)
-            step_count += 1
+                state.last_infer_time_ms = (time.time() - t0) * 1000.0
         else:
-            if perturb.active != 0:
-                mujoco.mjv_applyPerturbPose(model, data, perturb, 1)
+            # Nominal Passive / Active Standing Stance Hold
+            if model.nu >= 14:
+                data.ctrl[:14] = self.config.DEFAULT_POSITION_14
+            state.last_action.fill(0.0)
 
-        # Smooth dynamic camera tracking when not orbiting manually
-        if trunk_id >= 0 and not (button_left or button_right or button_middle):
-            camera.lookat[0] = data.xpos[trunk_id][0]
-            camera.lookat[1] = data.xpos[trunk_id][1]
-            camera.lookat[2] = data.xpos[trunk_id][2] + 0.05
 
-        # Render 3D MuJoCo Scene
-        win_w, win_h = glfw.get_window_size(window)
-        fb_w, fb_h = glfw.get_framebuffer_size(window)
-        viewport = mujoco.MjrRect(0, 0, fb_w, fb_h)
+# ==============================================================================
+# 5. Non-Blocking Terminal Input Listener
+# ==============================================================================
+class TerminalInputListener(threading.Thread):
+    """Listens for single keypresses on terminal stdin without requiring Enter."""
+    def __init__(self, callback):
+        super().__init__(daemon=True)
+        self.callback = callback
+        self.running = True
 
-        mujoco.mjv_updateScene(model, data, option, perturb, camera, mujoco.mjtCatBit.mjCAT_ALL, scene)
-        mujoco.mjr_render(viewport, scene, context)
+    def run(self):
+        try:
+            import termios
+            import tty
+            if not sys.stdin.isatty():
+                return
+            fd = sys.stdin.fileno()
+            old_settings = termios.tcgetattr(fd)
+            try:
+                tty.setcbreak(fd)
+                while self.running:
+                    rlist, _, _ = select.select([sys.stdin], [], [], 0.05)
+                    if rlist:
+                        ch = sys.stdin.read(1)
+                        if ch:
+                            self.callback(ch)
+            finally:
+                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        except Exception:
+            pass
 
-        # 1. Top-Left HUD (Title, Status, Sim Time, Policy)
-        status_text = f"PAUSED ({data.time:.2f}s)" if paused else f"RUNNING ({data.time:.2f}s)"
-        policy_hud = f"Policy: {policy_name}"
-        if ort_session:
-            policy_hud += f" ({last_infer_time:.1f}ms)"
+
+# ==============================================================================
+# 6. MuJoCo Interactive Viewer & OpenGL Renderer
+# ==============================================================================
+class MuJoCoViewer:
+    """Manages GLFW window, camera, user inputs, perturbation, and simulation loop."""
+    def __init__(self, model_path: str, policy_path: str, speed_multiplier: float = 1.0):
+        self.config = ViewerConfig()
+        self.model_path = model_path
+        self.speed_multiplier = speed_multiplier
+        self.state = SimulationState(self.config)
+        self.policy = PolicyController(policy_path, self.config)
+
+        # Build full MuJoCo scene XML with ground plane
+        scene_xml = f"""
+        <mujoco>
+            <option gravity="0 0 -9.81" timestep="{self.config.PHYSICS_TIMESTEP}" iterations="50" solver="Newton" cone="elliptic"/>
+            <asset>
+                <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="512"/>
+                <texture name="texplane" type="2d" builtin="checker" rgb1=".25 .3 .35" rgb2=".15 0.18 0.22" width="512" height="512" mark="cross" markrgb=".8 .8 .8"/>
+                <material name="matplane" reflectance="0.2" texture="texplane" texrepeat="2 2" texuniform="true"/>
+            </asset>
+            <worldbody>
+                <light directional="true" diffuse=".9 .9 .9" specular=".3 .3 .3" pos="0 0 4" dir="0 0 -1"/>
+                <geom name="floor" type="plane" pos="0 0 0" size="10 10 0.1" material="matplane" contype="1" conaffinity="1" friction="2.0 0.01 0.001" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2"/>
+            </worldbody>
+            <include file="{self.model_path}"/>
+        </mujoco>
+        """
+
+        self.model = mujoco.MjModel.from_xml_string(scene_xml)
+        self.data = mujoco.MjData(self.model)
+
+        # Viewer structures
+        self.camera = mujoco.MjvCamera()
+        self.option = mujoco.MjvOption()
+        self.scene = mujoco.MjvScene(self.model, maxgeom=10000)
+        self.context = None
+        self.perturb = mujoco.MjvPerturb()
+        self.window = None
+
+        # Interaction mouse states
+        self.button_left = False
+        self.button_middle = False
+        self.button_right = False
+        self.last_x = 0.0
+        self.last_y = 0.0
+
+        # Initialize posture
+        self.reset_to_standing()
+
+        # Terminal input thread
+        self.term_listener = TerminalInputListener(self.process_command_char)
+        self.term_listener.start()
+
+    def reset_to_standing(self):
+        """Resets the robot to an upright standing posture resting stably on the floor."""
+        mujoco.mj_resetData(self.model, self.data)
+        if self.model.nq >= 21:
+            self.data.qpos[0:3] = [0.0, 0.0, 0.125]
+            self.data.qpos[3:7] = [1.0, 0.0, 0.0, 0.0]
+            self.data.qpos[7:21] = self.config.DEFAULT_POSITION_14
+        if self.model.nu >= 14:
+            self.data.ctrl[:14] = self.config.DEFAULT_POSITION_14
+        self.data.qvel[:] = 0.0
+        mujoco.mj_forward(self.model, self.data)
+        self.state.reset_controls()
+
+    def get_current_yaw(self) -> float:
+        """Returns the current yaw of trunk_base in radians."""
+        trunk_quat = self.data.qpos[3:7] if len(self.data.qpos) >= 7 else np.array([1.0, 0.0, 0.0, 0.0])
+        return quat_to_yaw(trunk_quat)
+
+    def process_command_char(self, key_char: str):
+        """Processes high-level user command characters from terminal or GLFW."""
+        k = key_char.lower()
+        if k in ('w', 'up'):
+            self.state.cmd_vx = self.config.FORWARD_VX
+            self.state.target_heading = self.get_current_yaw()
+            ActionLogger.log_action("W / UP", "Forward Walking", f"vx={self.state.cmd_vx:+.2f} m/s, Heading Latch={math.degrees(self.state.target_heading):+.0f}°")
+        elif k in ('s', 'down'):
+            self.state.cmd_vx = self.config.BACKWARD_VX
+            self.state.target_heading = self.get_current_yaw()
+            ActionLogger.log_action("S / DOWN", "Backward Walking", f"vx={self.state.cmd_vx:+.2f} m/s, Heading Latch={math.degrees(self.state.target_heading):+.0f}°")
+        elif k in ('a', 'left'):
+            self.state.cmd_vx = self.config.TURN_VX
+            self.state.target_heading = wrap_to_pi(self.state.target_heading + math.radians(self.config.HEADING_STEP_DEG))
+            ActionLogger.log_action("A / LEFT", "Steer Left", f"+{self.config.HEADING_STEP_DEG:.0f}° ➔ New Target Heading={math.degrees(self.state.target_heading):+.0f}°")
+        elif k in ('d', 'right'):
+            self.state.cmd_vx = self.config.TURN_VX
+            self.state.target_heading = wrap_to_pi(self.state.target_heading - math.radians(self.config.HEADING_STEP_DEG))
+            ActionLogger.log_action("D / RIGHT", "Steer Right", f"-{self.config.HEADING_STEP_DEG:.0f}° ➔ New Target Heading={math.degrees(self.state.target_heading):+.0f}°")
+        elif k == 'x':
+            self.state.reset_controls()
+            ActionLogger.log_action("X", "Emergency Stop", "Motors locked in stable standing stance")
+        elif k == 'r':
+            self.reset_to_standing()
+            ActionLogger.log_action("R", "Reset Robot", "Respawned upright at origin")
+        elif k == ' ':
+            self.state.paused = not self.state.paused
+            ActionLogger.log_action("SPACE", "Pause Toggle", "PAUSED" if self.state.paused else "RESUMED")
+
+    def print_diagnostics(self):
+        """Prints startup model diagnostics and kinematics table."""
+        print("=" * 65)
+        print("🦆 Microduck Physical AI Simulation & Masterclass Viewer")
+        print("=" * 65)
+        print(f"Loading MJCF model from: {self.model_path}")
+        print("✅ Model and Scene loaded successfully!")
+        print(f"  • Generalized coordinates (nq) : {self.model.nq}")
+        print(f"  • Degrees of freedom (nv)      : {self.model.nv}")
+        print(f"  • Number of joints (njnt)      : {self.model.njnt}")
+        print(f"  • Number of bodies (nbody)     : {self.model.nbody}")
+        print(f"  • Number of geoms (ngeom)      : {self.model.ngeom}")
+        print(f"  • Number of actuators (nu)     : {self.model.nu}")
+        print(f"  • Timestep                     : {self.model.opt.timestep:.4f} s ({1.0/self.model.opt.timestep:.0f} Hz)")
+        print("-" * 65)
+        print("🎮 Controls Guide (Works in Terminal OR 3D Window):")
+        print("  • 'W' / Up Arrow        : 🚶 Walk Straight Ahead (Heading Locked)")
+        print("  • 'S' / Down Arrow      : 🔙 Walk Backward (vx = -0.24 m/s)")
+        print("  • 'A' / 'D' (Left/Right): 🔄 Steer Left / Right (±35° course step)")
+        print("  • 'X'                   : 🛑 Stop & Hold Standing Balance")
+        print("  • 'R'                   : 🔄 Reset Position to Standing")
+        print("  • Spacebar              : ⏸️ Pause / Resume Physics")
+        print("  • Left Click + Drag     : Orbit Camera around Duck")
+        print("  • Right Click + Drag    : Pan Camera")
+        print("  • Scroll Wheel          : Zoom In / Out")
+        print("  • Ctrl + Left Drag      : 🪢 Grab & Pull Body (Spring Perturbation)")
+        print("  • [J]oints | [G] Sites | [C]ontacts | [I]nertia | [T]ransparent : Visual Toggles")
+        print("  • ESC                   : Quit Viewer")
+        print("=" * 65)
+
+    def run_headless(self, steps: int = 500):
+        """Runs the simulation headlessly for automated verification."""
+        ActionLogger.log_status(f"Headless mode detected. Stepping physics {steps} times...")
+        for _ in range(steps):
+            self.policy.step(self.model, self.data, self.state)
+            mujoco.mj_step(self.model, self.data)
+            self.state.step_count += 1
+        pos = self.data.qpos[:3]
+        ActionLogger.log_status(f"Headless simulation completed: Trunk pos = [{pos[0]:+.4f}, {pos[1]:+.4f}, {pos[2]:.4f}]m")
+
+    def run(self):
+        """Main GLFW graphical viewer loop."""
+        display = os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")
+        if not display:
+            self.run_headless()
+            return
+
+        if not glfw.init():
+            ActionLogger.log_error("Failed to initialize GLFW. Falling back to headless.")
+            self.run_headless()
+            return
+
+        self.window = glfw.create_window(1280, 720, "Microduck Physical AI Interactive Simulation", None, None)
+        if not self.window:
+            glfw.terminate()
+            self.run_headless()
+            return
+
+        glfw.make_context_current(self.window)
+        glfw.swap_interval(1)
+
+        # Setup MuJoCo rendering context
+        self.context = mujoco.MjrContext(self.model, mujoco.mjtFontScale.mjFONTSCALE_150)
+        mujoco.mjv_defaultCamera(self.camera)
+        mujoco.mjv_defaultOption(self.option)
+        mujoco.mjv_defaultPerturb(self.perturb)
+
+        # Set default camera orbit
+        self.camera.azimuth = 135.0
+        self.camera.elevation = -20.0
+        self.camera.distance = 0.85
+        self.camera.lookat = np.array([0.0, 0.0, 0.12])
+
+        # Register GLFW callbacks
+        glfw.set_mouse_button_callback(self.window, self._mouse_button_callback)
+        glfw.set_cursor_pos_callback(self.window, self._cursor_pos_callback)
+        glfw.set_scroll_callback(self.window, self._scroll_callback)
+        glfw.set_key_callback(self.window, self._key_callback)
+
+        self.print_diagnostics()
+
+        sim_dt = self.model.opt.timestep
+        last_wall_time = time.time()
+
+        while not glfw.window_should_close(self.window):
+            current_wall_time = time.time()
+            elapsed_wall = current_wall_time - last_wall_time
+            last_wall_time = current_wall_time
+
+            if not self.state.paused:
+                self.state.sim_time_accumulator += min(elapsed_wall * max(self.speed_multiplier, 0.1), 0.1)
+
+                while self.state.sim_time_accumulator >= sim_dt:
+                    # 1. Policy step / course-correction
+                    self.policy.step(self.model, self.data, self.state)
+
+                    # 2. Apply interactive perturbations
+                    if self.perturb.active != 0:
+                        mujoco.mjv_applyPerturbPose(self.model, self.data, self.perturb, 0)
+                        mujoco.mjv_applyPerturbForce(self.model, self.data, self.perturb)
+
+                    # 3. Advance physics
+                    mujoco.mj_step(self.model, self.data)
+                    self.state.step_count += 1
+                    self.state.sim_time_accumulator -= sim_dt
+
+            # Camera tracks robot root
+            if self.model.nq >= 3:
+                self.camera.lookat[0] = self.data.qpos[0]
+                self.camera.lookat[1] = self.data.qpos[1]
+                self.camera.lookat[2] = self.data.qpos[2]
+
+            # Render scene
+            width, height = glfw.get_framebuffer_size(self.window)
+            viewport = mujoco.MjrRect(0, 0, width, height)
+            mujoco.mjv_updateScene(self.model, self.data, self.option, self.perturb, self.camera, mujoco.mjtCatBit.mjCAT_ALL, self.scene)
+            mujoco.mjr_render(viewport, self.scene, self.context)
+
+            # Live HUD Overlay
+            self._render_hud(viewport)
+
+            glfw.swap_buffers(self.window)
+            glfw.poll_events()
+
+        glfw.terminate()
+        ActionLogger.log_status("Viewer closed cleanly.")
+
+    def _render_hud(self, viewport):
+        """Renders live on-screen telemetry overlay."""
+        q = self.data.qpos[3:7] if len(self.data.qpos) >= 7 else np.array([1.0, 0.0, 0.0, 0.0])
+        roll = np.degrees(np.arctan2(2.0*(q[0]*q[1] + q[2]*q[3]), 1.0 - 2.0*(q[1]**2 + q[2]**2)))
+        pitch = np.degrees(np.arcsin(2.0*(q[0]*q[2] - q[3]*q[1])))
+        yaw = np.degrees(quat_to_yaw(q))
+        z_height = self.data.qpos[2] if len(self.data.qpos) >= 3 else 0.0
+
+        state_str = "PAUSED" if self.state.paused else ("WALKING" if self.state.is_driving else "STANDING")
+        hud_left = (
+            f"State: {state_str} | vx: {self.state.cmd_vx:+.2f} m/s | Target Heading: {math.degrees(self.state.target_heading):+.0f}°\n"
+            f"Trunk z: {z_height:.3f}m | Roll: {roll:+.1f}° | Pitch: {pitch:+.1f}° | Yaw: {yaw:+.1f}°\n"
+            f"Contacts: {self.data.ncon:2d} | Infer: {self.state.last_infer_time_ms:.1f}ms (50Hz)"
+        )
         mujoco.mjr_overlay(
             mujoco.mjtFontScale.mjFONTSCALE_150,
             mujoco.mjtGridPos.mjGRID_TOPLEFT,
             viewport,
-            "🦆 Microduck Simulation",
-            f"{status_text}\n{policy_hud}",
-            context
-        )
-
-        # 2. Top-Right HUD (Live Telemetry, Commanded Velocity & Flags)
-        if trunk_id >= 0:
-            trunk_x, trunk_y, trunk_z = data.xpos[trunk_id]
-            q = data.xquat[trunk_id]
-            r, p, y = quat_to_euler_deg(q)
-            flags_str = (
-                f"Trunk Pos: [{trunk_x:+.2f}, {trunk_y:+.2f}, {trunk_z:+.2f}]m\n"
-                f"IMU Euler: R:{r:+.1f}° P:{p:+.1f}° Y:{y:+.1f}°\n"
-                f"Drive Cmd: [Vx: {cmd_vx:+.2f} m/s, Vθ: {cmd_vtheta:+.2f} rad/s]\n"
-                f"Flags: [J]oints:{'ON' if option.flags[mujoco.mjtVisFlag.mjVIS_JOINT] else 'OFF'} | "
-                f"[S]ites:{'ON' if option.sitegroup[3] == 1 else 'OFF'} | "
-                f"[C]ontacts:{'ON' if option.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] else 'OFF'} | "
-                f"[I]nertia:{'ON' if option.flags[mujoco.mjtVisFlag.mjVIS_INERTIA] else 'OFF'}"
-            )
-            mujoco.mjr_overlay(
-                mujoco.mjtFontScale.mjFONTSCALE_150,
-                mujoco.mjtGridPos.mjGRID_TOPRIGHT,
-                viewport,
-                "📊 Live Telemetry",
-                flags_str,
-                context
-            )
-
-        # 3. Bottom-Left HUD (Controls Cheatsheet)
-        ctrl_help = "WASD/Arrows: Drive | X: Stop | Space: Pause | R: Reset | Ctrl+Drag: Perturb | J,S,C,I: Flags"
-        mujoco.mjr_overlay(
-            mujoco.mjtFontScale.mjFONTSCALE_100,
-            mujoco.mjtGridPos.mjGRID_BOTTOMLEFT,
-            viewport,
-            ctrl_help,
+            hud_left,
             "",
-            context
+            self.context
         )
 
-        # 4. Render Guaranteed In-Frame Cursor
-        is_perturbing = (perturb.active != 0)
-        is_dragging = (button_left or button_right or button_middle)
-        render_gl_cursor(mouse_x, mouse_y, win_w, win_h, fb_w, fb_h, is_dragging, is_perturbing)
+    # GLFW Event Callbacks
+    def _mouse_button_callback(self, win, button, act, mods):
+        self.button_left = (glfw.get_mouse_button(win, glfw.MOUSE_BUTTON_LEFT) == glfw.PRESS)
+        self.button_middle = (glfw.get_mouse_button(win, glfw.MOUSE_BUTTON_MIDDLE) == glfw.PRESS)
+        self.button_right = (glfw.get_mouse_button(win, glfw.MOUSE_BUTTON_RIGHT) == glfw.PRESS)
+        self.last_x, self.last_y = glfw.get_cursor_pos(win)
 
-        glfw.swap_buffers(window)
-        glfw.poll_events()
+        ctrl_pressed = (glfw.get_key(win, glfw.KEY_LEFT_CONTROL) == glfw.PRESS or glfw.get_key(win, glfw.KEY_RIGHT_CONTROL) == glfw.PRESS)
 
-        time_until_next = sim_dt - (time.time() - step_start)
-        if time_until_next > 0:
-            time.sleep(time_until_next / max(args.speed, 0.1))
+        if act == glfw.PRESS and ctrl_pressed:
+            width, height = glfw.get_framebuffer_size(win)
+            selpnt = np.zeros(3, dtype=np.float64)
+            selgeom = np.zeros(1, dtype=np.int32)
+            selskin = np.zeros(1, dtype=np.int32)
+            selbody = mujoco.mjv_select(
+                self.model, self.data, self.option, width / height,
+                self.last_x / width, (height - self.last_y) / height,
+                self.scene, selpnt, selgeom, selskin
+            )
+            if selbody >= 0:
+                if self.button_left:
+                    self.perturb.active = int(mujoco.mjtPertBit.mjPERT_TRANSLATE)
+                elif self.button_right:
+                    self.perturb.active = int(mujoco.mjtPertBit.mjPERT_ROTATE)
+                mujoco.mjv_initPerturb(self.model, self.data, self.scene, self.perturb)
+                body_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_BODY, selbody) or f"body_{selbody}"
+                ActionLogger.log_action("CTRL+CLICK", "Spring Perturbation", f"Grabbed {body_name}")
+        elif act == glfw.RELEASE:
+            self.perturb.active = 0
 
-    glfw.terminate()
+    def _cursor_pos_callback(self, win, xpos, ypos):
+        dx = xpos - self.last_x
+        dy = ypos - self.last_y
+        self.last_x = xpos
+        self.last_y = ypos
+
+        if not (self.button_left or self.button_right or self.button_middle):
+            return
+
+        width, height = glfw.get_framebuffer_size(win)
+        ctrl_pressed = (glfw.get_key(win, glfw.KEY_LEFT_CONTROL) == glfw.PRESS or glfw.get_key(win, glfw.KEY_RIGHT_CONTROL) == glfw.PRESS)
+
+        if ctrl_pressed and self.perturb.active != 0:
+            action = int(mujoco.mjtMouse.mjMOUSE_MOVE_V) if self.button_right else int(mujoco.mjtMouse.mjMOUSE_MOVE_H)
+            mujoco.mjv_movePerturb(self.model, self.data, action, dx / width, dy / height, self.scene, self.perturb)
+            return
+
+        if self.button_left:
+            action = int(mujoco.mjtMouse.mjMOUSE_ROTATE_H) if abs(dx) > abs(dy) else int(mujoco.mjtMouse.mjMOUSE_ROTATE_V)
+        elif self.button_right:
+            action = int(mujoco.mjtMouse.mjMOUSE_MOVE_H) if abs(dx) > abs(dy) else int(mujoco.mjtMouse.mjMOUSE_MOVE_V)
+        elif self.button_middle:
+            action = int(mujoco.mjtMouse.mjMOUSE_ZOOM)
+        else:
+            action = int(mujoco.mjtMouse.mjMOUSE_NONE)
+
+        mujoco.mjv_moveCamera(self.model, action, dx / width, dy / height, self.camera)
+
+    def _scroll_callback(self, win, xoffset, yoffset):
+        action = int(mujoco.mjtMouse.mjMOUSE_ZOOM)
+        mujoco.mjv_moveCamera(self.model, action, 0.0, -0.05 * yoffset, self.camera)
+
+    def _key_callback(self, win, key, scancode, act, mods):
+        if act in (glfw.PRESS, glfw.REPEAT):
+            # Motion controls
+            if key in (glfw.KEY_W, glfw.KEY_UP):
+                self.process_command_char('w')
+            elif key in (glfw.KEY_S, glfw.KEY_DOWN):
+                self.process_command_char('s')
+            elif key in (glfw.KEY_A, glfw.KEY_LEFT):
+                self.process_command_char('a')
+            elif key in (glfw.KEY_D, glfw.KEY_RIGHT):
+                self.process_command_char('d')
+            elif key == glfw.KEY_X:
+                self.process_command_char('x')
+
+        if act == glfw.PRESS:
+            if key == glfw.KEY_SPACE:
+                self.process_command_char(' ')
+            elif key in (glfw.KEY_R, glfw.KEY_BACKSPACE):
+                self.process_command_char('r')
+            elif key == glfw.KEY_ESCAPE:
+                glfw.set_window_should_close(win, True)
+                ActionLogger.log_action("ESC", "Quit Viewer", "Closing window")
+            # Visual flag toggles
+            elif key == glfw.KEY_J:
+                self.option.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = not self.option.flags[mujoco.mjtVisFlag.mjVIS_JOINT]
+                ActionLogger.log_action("J", "Toggle Joint Axes", f"Active={bool(self.option.flags[mujoco.mjtVisFlag.mjVIS_JOINT])}")
+            elif key == glfw.KEY_G:
+                self.option.sitegroup[3] = 0 if self.option.sitegroup[3] == 1 else 1
+                ActionLogger.log_action("G", "Toggle Sensor Sites", f"SiteGroup3={self.option.sitegroup[3]}")
+            elif key == glfw.KEY_C:
+                curr = self.option.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT]
+                self.option.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = not curr
+                self.option.flags[mujoco.mjtVisFlag.mjVIS_CONTACTFORCE] = not curr
+                ActionLogger.log_action("C", "Toggle Contacts & Forces", f"Active={not curr}")
+            elif key == glfw.KEY_I:
+                self.option.flags[mujoco.mjtVisFlag.mjVIS_INERTIA] = not self.option.flags[mujoco.mjtVisFlag.mjVIS_INERTIA]
+                ActionLogger.log_action("I", "Toggle Inertia Ellipsoids", f"Active={bool(self.option.flags[mujoco.mjtVisFlag.mjVIS_INERTIA])}")
+            elif key == glfw.KEY_T:
+                self.option.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT] = not self.option.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT]
+                ActionLogger.log_action("T", "Toggle Transparency", f"Active={bool(self.option.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT])}")
+            elif key == glfw.KEY_F:
+                self.option.flags[mujoco.mjtVisFlag.mjVIS_TEXTURE] = not self.option.flags[mujoco.mjtVisFlag.mjVIS_TEXTURE]
+                ActionLogger.log_action("F", "Toggle Floor Texture", f"Active={bool(self.option.flags[mujoco.mjtVisFlag.mjVIS_TEXTURE])}")
+
+
+# ==============================================================================
+# 7. Main Entry Point
+# ==============================================================================
+def main():
+    parser = argparse.ArgumentParser(description="Microduck Physical AI Interactive Simulation Viewer")
+    parser.add_argument("--model", type=str, default=os.path.join(os.path.dirname(__file__), "kinematics", "assets", "alpha", "robot_walk.xml"), help="Path to robot XML")
+    parser.add_argument("--policy", type=str, default=os.path.join(os.path.dirname(__file__), "policies", "alpha_walking.onnx"), help="Path to ONNX policy")
+    parser.add_argument("--speed", type=float, default=1.0, help="Simulation playback speed multiplier")
+    args = parser.parse_args()
+
+    model_path = os.path.abspath(args.model)
+    if not os.path.exists(model_path):
+        ActionLogger.log_error(f"Model file not found: {model_path}")
+        sys.exit(1)
+
+    viewer = MuJoCoViewer(model_path=model_path, policy_path=args.policy, speed_multiplier=args.speed)
+    viewer.run()
+
 
 if __name__ == "__main__":
     main()
-
