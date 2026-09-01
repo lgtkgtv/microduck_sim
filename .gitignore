@@ -10,5 +10,6 @@ wheels/
 .venv
 .venv/
 *.zip
-!microduck_all_handouts.zip
+!docs/microduck_all_handouts.zip
+!policies/checkpoints/*.zip
 .ipynb_checkpoints/

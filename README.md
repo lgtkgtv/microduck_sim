@@ -1,7 +1,8 @@
 # 🦆 Microduck Physical AI Simulation & Masterclass
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lgtkgtv/microduck_sim/blob/main/notebooks/microduck_masterclass.ipynb)
 [![Live Portal](https://img.shields.io/badge/Web%20Portal-GitHub%20Pages-38bdf8?style=for-the-badge&logo=github)](https://lgtkgtv.github.io/microduck_sim/)
-[![Physics Engine](https://img.shields.io/badge/Physics-MuJoCo%203.12-10b981?style=for-the-badge)](https://mujoco.org/)
+[![Physics Engine](https://img.shields.io/badge/Physics-MuJoCo%203.x-10b981?style=for-the-badge)](https://mujoco.org/)
 [![RL Pipeline](https://img.shields.io/badge/RL-PyTorch%20%7C%20PPO-f59e0b?style=for-the-badge&logo=pytorch)](https://pytorch.org/)
 [![ONNX Deployment](https://img.shields.io/badge/Inference-ONNX%20Runtime-a855f7?style=for-the-badge&logo=onnx)](https://onnxruntime.ai/)
 [![Curriculum Suite](https://img.shields.io/badge/Verified-100%25%206--Phase%20Proofs-34d399?style=for-the-badge)](verify_curriculum.py)
@@ -9,42 +10,48 @@
 
 A self-contained **Physical AI simulation studio, Reinforcement Learning pipeline, and 6-phase interactive curriculum** for the [Pollen Robotics Microduck](https://github.com/pollen-robotics/microduck) (15-DOF bipedal robot).
 
-This repository contains everything needed to simulate the robot in 3D physics, train locomotion policies using PPO, extract hardware-safe ONNX models, run an asynchronous 50Hz edge control loop, and teach or learn physical AI through interactive web slides and printable engineering handouts.
+This repository is designed as a **zero-barrier educational on-ramp for anyone new to Physical AI and Robotics**. It runs out of the box on standard laptops, PCs, Linux/WSL2, or Google Colab (CPU or GPU) without requiring physical robot hardware.
 
 ---
 
-## 🌉 Physical AI: From Digital Twin to Physical Hardware
+## 🌐 The Three-Tier Robot Ecosystem
 
-This repository is a **100% self-contained Digital Twin and Learning Studio**. Anyone cloning `microduck_sim` gets a complete, standalone simulation and training environment that runs out of the box on any standard PC, laptop, or Linux/WSL2 setup without requiring physical robot hardware.
-
-### 🔄 The Sim-to-Real Architecture
+Understanding how simulation, embedded hardware, and high-throughput research connect:
 
 ```text
 +-------------------------------------------------------------------------------+
-|                       microduck_sim (This Repository)                         |
-|  • 3D Native MuJoCo Simulation (18 Geoms, GLFW Viewer, Perturbations)         |
-|  • PPO Reinforcement Learning Pipeline (Gymnasium Environment)                |
-|  • Silicon Hardware Clamping & ONNX Policy Extraction                         |
-|  • 6-Phase Web Masterclass & Printable Technical Literature                   |
+|                    🎓 microduck_sim (This Repository)                         |
+|   The Zero-Prerequisite Physical AI Classroom & Digital Twin                  |
+|   • 3D Interactive Native MuJoCo Simulation (CPU/GPU, Perturbations)           |
+|   • PPO Reinforcement Learning Pipeline (Gymnasium, Fast CPU Mode)            |
+|   • Silicon Hardware Clamping & ONNX Policy Extraction                        |
+|   • 6-Phase Web Masterclass, Jupyter Notebook & Printable PDF Manuals         |
 +---------------------------------------+---------------------------------------+
                                         │
                                         │ (Exported .onnx Policies)
                                         ▼
 +-------------------------------------------------------------------------------+
-|                     Physical Microduck (Target Hardware)                      |
-|  • Rockchip RK3566 Single Board Computer (Quad-core ARM Cortex-A55)           |
-|  • Embedded Low-Level Control Daemons (e.g. robotd / duckctl)                 |
-|  • 15x STS3215 High-Torque Bus Servos over Serial/CAN Bus                     |
-|  • 50Hz Real-Time Locomotion Heartbeat (< 20ms Control Loop)                   |
+|                 🦾 pollen-robotics/microduck (Target Hardware)                |
+|   The Physical Robot Embedded Stack (Rust Daemons)                            |
+|   • Rockchip RK3566 Single Board Computer (Quad-core ARM Cortex-A55)          |
+|   • Embedded Low-Level Control Daemons (robotd, btd, tofd, configd)           |
+|   • 15x STS3215 / XL330 High-Torque Bus Servos over Serial/CAN Bus            |
+|   • 50Hz Real-Time Locomotion Heartbeat (< 20ms Control Loop)                 |
++-------------------------------------------------------------------------------+
+                                        ▲
+                                        │ (Advanced Production Policies)
++---------------------------------------+---------------------------------------+
+|                ⚡ pollen-robotics/microduck_rl (Research Stack)                |
+|   Industrial High-Throughput GPU Training (MuJoCo Warp / mjlab)               |
+|   • 4,096 Massively Parallel Environments on NVIDIA CUDA GPUs                 |
+|   • Complex BAM Actuator Physics, Backlash Gears & Domain Randomization       |
+|   • Hot-Swappable 61-D Observation Space Architecture                         |
 +-------------------------------------------------------------------------------+
 ```
 
-1. **Simulation & Training (`microduck_sim`):** Build 3D kinematic models, train bipedal locomotion policies using PPO in MuJoCo, and extract hardware-safe `.onnx` models with silicon torque limits.
-2. **Physical Deployment (Sim-to-Real):** The exported `.onnx` policies can then be deployed directly to physical robots running embedded control daemons (such as Pollen Robotics' [Microduck firmware](https://github.com/pollen-robotics/microduck) on the Rockchip RK3566 SBC).
-
 ---
 
-## ⚡ Quickstart in 3 Steps
+## ⚡ Quickstart: "Zero-to-Duck" in 60 Seconds
 
 ### Step 1: Clone & Setup
 ```bash
@@ -59,28 +66,36 @@ uv sync
 sudo apt-get update && sudo apt-get install -y libglfw3 libgl1 libgl1-mesa-dev x11-xserver-utils
 ```
 
-### Step 2: Launch the 3D Interactive Simulation
-Launch the native MuJoCo physics viewer with live telemetry and physical interaction:
+### Step 2: 🕹️ Drive the Pre-trained Policy in 3D (Instant Gratification!)
+Launch the native 3D physics simulation and drive the duck with pre-trained neural locomotion policies using your keyboard:
 ```bash
-./launch.sh
+# Drive the robot with the pre-trained walking policy:
+./launch.sh --policy policies/alpha_walking.onnx
+
+# Or run other behavioral policies:
+./launch.sh --policy policies/alpha_sitstand.onnx
 ```
 
-### Step 3: Explore the Web Masterclass
-Access the live web curriculum at **[https://lgtkgtv.github.io/microduck_sim/](https://lgtkgtv.github.io/microduck_sim/)**  
-*Or run it locally for offline classroom use:*
-```bash
-uv run python -m http.server 8000
-# Open http://localhost:8000 in any browser
-```
+### Step 3: Explore the Web Masterclass or Jupyter Sandbox
+- **Live Web Slide Decks:** **[https://lgtkgtv.github.io/microduck_sim/](https://lgtkgtv.github.io/microduck_sim/)**
+- **1-Click Google Colab Sandbox:** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lgtkgtv/microduck_sim/blob/main/notebooks/microduck_masterclass.ipynb)
+- **Offline Local Web Server:**
+  ```bash
+  uv run python -m http.server 8000
+  # Open http://localhost:8000 in your browser
+  ```
 
 ---
 
-## 🎮 Native 3D Simulation Controls
+## 🎮 Interactive 3D Simulation Controls
 
-The viewer ([`launch_viewer.py`](launch_viewer.py)) includes an in-frame cursor, real-time kinematics telemetry overlay, and full 3D physics interaction:
+The viewer ([`launch_viewer.py`](launch_viewer.py)) includes an in-frame cursor, real-time kinematics telemetry HUD, live policy inference, and full 3D physics interaction:
 
 | Control | Action | Function |
 | :--- | :--- | :--- |
+| **`W` / `S` or `Up` / `Down`** | `Key Press` | **🕹️ Drive Forward / Backward** (Increase/Decrease commanded velocity $v_x$) |
+| **`A` / `D` or `Left` / `Right`** | `Key Press` | **🔄 Turn Left / Right** (Command rotational yaw rate $v_\theta$) |
+| **`X`** | `Key Press` | **🛑 Stop Commands** (Zero commanded velocities) |
 | **Left Click + Drag** | `Mouse Left` | **Orbit Camera** in 3D around the robot |
 | **Right Click + Drag** | `Mouse Right` | **Pan Camera** across the viewport plane |
 | **Scroll Wheel** | `Mouse Wheel` | **Zoom In / Out** |
