@@ -18,3 +18,4 @@ MUJOCO_LOG.TXT
 *.log
 .ipynb_checkpoints/
 microduck_policy.onnx*
+module*.png
